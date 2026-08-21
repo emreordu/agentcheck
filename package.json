@@ -1,0 +1,19 @@
+{
+  "name": "agentcheck-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @agentcheck/core && npm run build --workspace agentcheck && npm run build --workspace agentcheck-vscode",
+    "test": "npm run test --workspace @agentcheck/core && npm run test --workspace agentcheck && npm run test --workspace agentcheck-vscode",
+    "typecheck": "npm run typecheck --workspace @agentcheck/core && npm run build --workspace @agentcheck/core && npm run typecheck --workspace agentcheck && npm run typecheck --workspace agentcheck-vscode"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
+  }
+}

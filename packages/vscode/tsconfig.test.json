@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist"
+  },
+  "include": [
+    "src/findings-tree.ts",
+    "src/**/*.test.ts"
+  ],
+  "exclude": []
+}

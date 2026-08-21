@@ -1,0 +1,10 @@
+node_modules/
+packages/*/dist/
+packages/*/.test-dist/
+packages/vscode/*.vsix
+packages/vscode/LICENSE
+packages/core/LICENSE
+packages/core/README.md
+packages/cli/LICENSE
+packages/cli/README.md
+*.tsbuildinfo

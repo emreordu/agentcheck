@@ -1,0 +1,81 @@
+{
+  "name": "agentcheck-vscode",
+  "displayName": "AgentCheck",
+  "version": "0.1.0",
+  "publisher": "agentcheck",
+  "description": "Independent change verification for AI-assisted coding in VS Code.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ai",
+    "code-review",
+    "git",
+    "verification"
+  ],
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:agentcheck.createCheckpoint",
+    "onCommand:agentcheck.reviewChanges",
+    "onCommand:agentcheck.showFindings",
+    "onCommand:agentcheck.clearCheckpoint",
+    "onView:agentcheck.findings"
+  ],
+  "main": "./dist/extension.cjs",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentcheck.createCheckpoint",
+        "title": "Create Checkpoint",
+        "category": "AgentCheck"
+      },
+      {
+        "command": "agentcheck.reviewChanges",
+        "title": "Review Changes",
+        "category": "AgentCheck"
+      },
+      {
+        "command": "agentcheck.showFindings",
+        "title": "Show Findings",
+        "category": "AgentCheck"
+      },
+      {
+        "command": "agentcheck.clearCheckpoint",
+        "title": "Clear Checkpoint",
+        "category": "AgentCheck"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agentcheck",
+          "title": "AgentCheck",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "agentcheck": [
+        {
+          "id": "agentcheck.findings",
+          "name": "Findings"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "test": "tsc -p tsconfig.test.json && node --test --test-isolation=none .test-dist/findings-tree.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out agentcheck-vscode-0.1.0.vsix"
+  },
+  "devDependencies": {
+    "@agentcheck/core": "0.1.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.25.0"
+  }
+}
