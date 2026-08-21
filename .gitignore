@@ -1,10 +1,44 @@
+# Dependencies
 node_modules/
+
+# Build / test outputs
 packages/*/dist/
 packages/*/.test-dist/
-packages/vscode/*.vsix
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Package artifacts
+*.tgz
+*.vsix
+
+# Generated package files
 packages/vscode/LICENSE
 packages/core/LICENSE
 packages/core/README.md
 packages/cli/LICENSE
 packages/cli/README.md
-*.tsbuildinfo
+
+# Environment / local credentials
+.env
+.env.*
+!.env.example
+.npmrc
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / workspace state
+.obsidian/
+.vscode/
+.idea/
+.vs/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
