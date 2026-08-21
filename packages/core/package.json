@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "npm run build && node ../../scripts/prepare-package-docs.mjs",
-    "test": "npm run build && tsc -p tsconfig.test.json && node --test --test-isolation=none .test-dist/checkpoint.test.js .test-dist/analyzer.test.js .test-dist/m4.test.js .test-dist/adversarial.test.js",
-    "typecheck": "tsc -p tsconfig.test.json --noEmit"
+	"test": "npm run build && tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/checkpoint.test.js .test-dist/analyzer.test.js .test-dist/m4.test.js .test-dist/adversarial.test.js",
+	"typecheck": "tsc -p tsconfig.test.json --noEmit"
   }
 }

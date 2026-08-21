@@ -68,7 +68,7 @@
   },
   "scripts": {
     "build": "node esbuild.mjs",
-    "test": "tsc -p tsconfig.test.json && node --test --test-isolation=none .test-dist/findings-tree.test.js",
+	"test": "tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/findings-tree.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out agentcheck-vscode-0.1.0.vsix"
   },
