@@ -23,10 +23,10 @@ AgentCheck preserves the real Git index and includes pre-existing tracked, stage
 
 ## Installation
 
-AgentCheck requires Node.js 22 or newer. npm distribution begins with the separate v0.1.0 publication step. When `agentcheck@0.1.0` is available on npm, install the CLI with:
+AgentCheck requires Node.js 22 or newer. The core package is `@agentcheck/core`; install the CLI from `@agentcheck/cli`:
 
 ```bash
-npm install -g agentcheck
+npm install -g @agentcheck/cli
 ```
 
 Before npm publication, use a source checkout: run `npm install` and `npm run build`, then invoke `node packages/cli/dist/index.js`. VS Code Marketplace distribution is also a separate publication step. Until the extension is available there, build its local VSIX with `npm run package --workspace agentcheck-vscode` and install that file using VS Code's “Install from VSIX...” command.
