@@ -21,7 +21,7 @@ It creates a Git-backed checkpoint, compares that checkpoint with the current re
 agentcheck start → coding agent → agentcheck → review → commit
 ```
 
-AgentCheck preserves the real Git index and includes pre-existing tracked, staged, unstaged, and non-ignored untracked state in the checkpoint. See [SEMANTICS.md](SEMANTICS.md) for the exact model.
+AgentCheck preserves the real Git index. Each checkpoint baseline represents `HEAD` plus the Git-visible working-tree state at that moment: pre-existing staged and unstaged tracked changes, tracked deletions, and non-ignored untracked files. See [SEMANTICS.md](SEMANTICS.md) for the exact model.
 
 ## Installation
 
@@ -40,6 +40,7 @@ agentcheck start
 
 # run your coding agent
 
+# review changes since the checkpoint
 agentcheck
 
 agentcheck clear
@@ -81,7 +82,7 @@ Risk
 +5 Database migration
 +4 Production configuration
 
-Score: 8 — HIGH
+Score: 9 — HIGH
 
 Verdict
 ────────────────────────────
@@ -90,7 +91,7 @@ CAREFUL REVIEW RECOMMENDED
 
 ## What it checks
 
-The v0.1 analyzers cover migration-like files, sensitive configuration, repository/deployment files, selected dependency manifests, large changes, conservative secret indicators, and test-change attention. Findings are evidence-based; they do not claim that a migration will run, a secret is valid, or test coverage is absent.
+The v0.1 analyzers flag migration-related files; recognized configuration files; Git ignore, Git attributes, and selected CI/CD files; dependency additions in supported manifests and changes to selected other dependency manifests; unusually large change sets or added files; newly introduced high-confidence secret indicators; and substantial production-source changes without related changed tests. Findings are evidence-based; they do not claim that a migration will run, a secret is valid, or test coverage is absent.
 
 ## VS Code
 
@@ -110,7 +111,7 @@ Most command-line users should install `@agentcheck/cli` instead. See the [`@age
 
 ## Privacy
 
-Runs entirely locally. Your source code never leaves your machine.
+Analysis is performed locally. AgentCheck itself does not upload repository or source data.
 
 AgentCheck v0.1 has no backend, account, login, cloud upload, LLM/API call, or telemetry. It invokes the local Git executable and stores checkpoint metadata in Git's repository metadata area.
 
