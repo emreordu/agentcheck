@@ -39,7 +39,7 @@
       },
       {
         "command": "agentcheck.showFindings",
-        "title": "Show Findings",
+        "title": "Show Review",
         "category": "AgentCheck"
       },
       {
@@ -61,7 +61,7 @@
       "agentcheck": [
         {
           "id": "agentcheck.findings",
-          "name": "Findings"
+          "name": "Review"
         }
       ]
     }

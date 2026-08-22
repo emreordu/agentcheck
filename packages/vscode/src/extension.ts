@@ -6,12 +6,19 @@ import {
   reviewChanges,
   type Finding,
   type ReviewResult,
-  type RiskLevel,
 } from "@agentcheck/core";
 import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import * as vscode from "vscode";
-import { buildFindingTree, childrenOf, type FindingTreeNode } from "./findings-tree.js";
+import {
+  buildReviewTree,
+  changeLabel,
+  checkpointStatus,
+  childrenOf,
+  reviewStatus,
+  type FindingTreeNode,
+  type ReviewPresentation,
+} from "./findings-tree.js";
 
 const COMMANDS = {
   createCheckpoint: "agentcheck.createCheckpoint",
@@ -24,31 +31,50 @@ const COMMANDS = {
 class FindingsTreeProvider implements vscode.TreeDataProvider<FindingTreeNode> {
   readonly #changes = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.#changes.event;
-  #findings: Finding[] | undefined;
+  #review: ReviewPresentation | undefined;
   #repositoryRoot: string | undefined;
   #workspaceRoot: string | undefined;
 
-  get hasReview(): boolean { return this.#findings !== undefined; }
+  get hasReview(): boolean { return this.#review !== undefined; }
 
   update(result: ReviewResult, repositoryRoot: string, workspaceRoot: string): void {
-    this.#findings = result.findings;
+    this.#review = result;
     this.#repositoryRoot = repositoryRoot;
     this.#workspaceRoot = workspaceRoot;
     this.#changes.fire();
   }
 
   clear(): void {
-    this.#findings = undefined;
+    this.#review = undefined;
     this.#repositoryRoot = undefined;
     this.#workspaceRoot = undefined;
     this.#changes.fire();
   }
 
   getChildren(element?: FindingTreeNode): FindingTreeNode[] {
-    return element ? childrenOf(element) : buildFindingTree(this.#findings ?? []);
+    return element ? childrenOf(element) : this.#review ? buildReviewTree(this.#review) : [];
   }
 
   getTreeItem(element: FindingTreeNode): vscode.TreeItem {
+    if (element.kind === "section") {
+      const count = element.section === "changes"
+        ? element.result.changes.files.length
+        : element.section === "findings" ? element.result.findings.length : undefined;
+      const label = count === undefined
+        ? element.section.toUpperCase()
+        : `${element.section.toUpperCase()} (${count})`;
+      const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
+      item.iconPath = new vscode.ThemeIcon(sectionIcon(element.section));
+      return item;
+    }
+    if (element.kind === "change") {
+      const item = new vscode.TreeItem(changeLabel(element.change));
+      item.iconPath = new vscode.ThemeIcon(changeIcon(element.change.type));
+      if (element.change.type !== "deleted" && this.#repositoryRoot && this.#workspaceRoot) {
+        item.command = openFileCommand(element.change.path, this.#repositoryRoot, this.#workspaceRoot);
+      }
+      return item;
+    }
     if (element.kind === "severity") {
       const item = new vscode.TreeItem(element.severity.toUpperCase(), vscode.TreeItemCollapsibleState.Expanded);
       item.description = String(element.findings.length);
@@ -56,22 +82,50 @@ class FindingsTreeProvider implements vscode.TreeDataProvider<FindingTreeNode> {
       return item;
     }
     if (element.kind === "finding") {
-      const state = element.finding.files.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
+      const state = vscode.TreeItemCollapsibleState.Collapsed;
       const item = new vscode.TreeItem(element.finding.title, state);
       item.description = element.finding.category;
       item.tooltip = new vscode.MarkdownString(`${escapeMarkdown(element.finding.title)}\n\n${escapeMarkdown(element.finding.description)}`);
       return item;
     }
 
-    const item = new vscode.TreeItem(element.path);
-    item.iconPath = vscode.ThemeIcon.File;
-    if (this.#repositoryRoot && this.#workspaceRoot) {
-      item.command = {
-        command: COMMANDS.openFile,
-        title: "Open file",
-        arguments: [element.path, this.#repositoryRoot, this.#workspaceRoot],
-      };
+    if (element.kind === "file") {
+      const item = new vscode.TreeItem(element.path);
+      item.description = "Affected file";
+      item.iconPath = vscode.ThemeIcon.File;
+      if (this.#repositoryRoot && this.#workspaceRoot) {
+        item.command = openFileCommand(element.path, this.#repositoryRoot, this.#workspaceRoot);
+      }
+      return item;
     }
+    if (element.kind === "detail") {
+      const item = new vscode.TreeItem(element.label);
+      item.description = element.value;
+      item.tooltip = element.value;
+      item.iconPath = new vscode.ThemeIcon("comment-discussion");
+      return item;
+    }
+    if (element.kind === "evidence-group") {
+      const item = new vscode.TreeItem("Evidence", vscode.TreeItemCollapsibleState.Expanded);
+      item.description = String(element.evidence.length);
+      item.iconPath = new vscode.ThemeIcon("search");
+      return item;
+    }
+    if (element.kind === "evidence") {
+      const item = new vscode.TreeItem(element.value);
+      item.tooltip = element.value;
+      item.iconPath = new vscode.ThemeIcon("quote");
+      return item;
+    }
+    if (element.kind === "risk-value") {
+      const item = new vscode.TreeItem(element.label);
+      item.description = element.value;
+      item.iconPath = new vscode.ThemeIcon(element.label === "Score" ? "pulse" : "shield");
+      return item;
+    }
+
+    const item = new vscode.TreeItem(element.value);
+    item.iconPath = new vscode.ThemeIcon("verified");
     return item;
   }
 
@@ -96,7 +150,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const checkpoint = await createCheckpoint(folder.uri.fsPath);
         findings.clear();
-        setIdleStatus(status);
+        applyStatus(status, checkpointStatus());
         void vscode.window.showInformationMessage(
           `AgentCheck checkpoint created. Branch: ${checkpoint.branch ?? "detached HEAD"}. Commit: ${checkpoint.head.slice(0, 7)}.`,
         );
@@ -115,10 +169,10 @@ export function activate(context: vscode.ExtensionContext): void {
           resolveRepository(folder.uri.fsPath),
         ]);
         findings.update(result, repository.root, folder.uri.fsPath);
-        setReviewStatus(status, result.risk.level);
+        applyStatus(status, reviewStatus(result.risk.level));
         void vscode.commands.executeCommand("agentcheck.findings.focus");
         void vscode.window.showInformationMessage(
-          `AgentCheck review complete: ${result.findings.length} findings, score ${result.risk.score} (${result.risk.level.toUpperCase()}).`,
+          `AgentCheck review complete: ${result.changes.files.length} changes, ${result.findings.length} findings, score ${result.risk.score} (${result.risk.level.toUpperCase()}).`,
         );
         return result;
       } catch (error) {
@@ -129,7 +183,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(COMMANDS.showFindings, async () => {
       await vscode.commands.executeCommand("agentcheck.findings.focus");
       if (!findings.hasReview) {
-        void vscode.window.showInformationMessage("Run AgentCheck: Review Changes to populate findings.");
+        void vscode.window.showInformationMessage("Run AgentCheck: Review Changes to populate the review.");
       }
       return true;
     }),
@@ -208,12 +262,34 @@ function friendlyError(error: unknown): string {
 
 function setIdleStatus(status: vscode.StatusBarItem): void {
   status.text = "$(shield) AgentCheck";
-  status.tooltip = "Run AgentCheck: Show Findings";
+  status.tooltip = "Run AgentCheck: Show Review";
 }
 
-function setReviewStatus(status: vscode.StatusBarItem, level: RiskLevel): void {
-  status.text = `$(shield) AgentCheck: ${level.toUpperCase()}`;
-  status.tooltip = "Show the latest AgentCheck findings";
+function applyStatus(status: vscode.StatusBarItem, presentation: { text: string; tooltip: string }): void {
+  status.text = presentation.text;
+  status.tooltip = presentation.tooltip;
+}
+
+function openFileCommand(path: string, repositoryRoot: string, workspaceRoot: string): vscode.Command {
+  return {
+    command: COMMANDS.openFile,
+    title: "Open file",
+    arguments: [path, repositoryRoot, workspaceRoot],
+  };
+}
+
+function sectionIcon(section: "changes" | "findings" | "risk" | "verdict"): string {
+  if (section === "changes") return "files";
+  if (section === "findings") return "search";
+  if (section === "risk") return "shield";
+  return "verified";
+}
+
+function changeIcon(type: ReviewResult["changes"]["files"][number]["type"]): string {
+  if (type === "created") return "diff-added";
+  if (type === "deleted") return "diff-removed";
+  if (type === "renamed") return "diff-renamed";
+  return "diff-modified";
 }
 
 function severityIcon(severity: Finding["severity"]): string {

@@ -28,15 +28,24 @@ export async function run(): Promise<void> {
     vscode.Uri.joinPath(folder.uri, "appsettings.Production.json"),
     Buffer.from(`${JSON.stringify({ featureEnabled: true, smokeRun: Date.now() })}\n`),
   );
+  await vscode.workspace.fs.writeFile(
+    vscode.Uri.joinPath(folder.uri, "dogfood-notes.md"),
+    Buffer.from("Changed documentation without a finding.\n"),
+  );
 
   const review = await vscode.commands.executeCommand<ReviewResult | undefined>(
     "agentcheck.reviewChanges",
   );
   assert.ok(review, "Review Changes did not return a result.");
-  assert.equal(review.changes.files.length, 1);
+  assert.equal(review.changes.files.length, 2);
+  assert.ok(review.changes.files.some(({ path }) => path === "dogfood-notes.md"));
   assert.ok(
     review.findings.some((finding) => finding.title === "Production configuration changed"),
   );
+  assert.ok(review.findings.every((finding) => !finding.files.includes("dogfood-notes.md")));
+  assert.equal(typeof review.risk.score, "number");
+  assert.ok(["low", "medium", "high"].includes(review.risk.level));
+  assert.ok(["LOOKS ROUTINE", "REVIEW RECOMMENDED", "CAREFUL REVIEW RECOMMENDED"].includes(review.verdict));
   assert.equal(await vscode.commands.executeCommand<boolean>("agentcheck.showFindings"), true);
   await vscode.commands.executeCommand(
     "agentcheck.openFile",
