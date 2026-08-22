@@ -15,9 +15,7 @@ coverage/
 # Generated package files
 packages/vscode/LICENSE
 packages/core/LICENSE
-packages/core/README.md
 packages/cli/LICENSE
-packages/cli/README.md
 
 # Environment / local credentials
 .env

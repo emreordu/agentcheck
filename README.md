@@ -2,7 +2,9 @@
 
 > Your coding agent says it's done. AgentCheck tells you what changed and what deserves your attention before you commit.
 
-Independent change verification for AI-assisted coding.
+Deterministic, local-first verification of coding-agent changes before you commit.
+
+Available as the [`@agentcheck/cli` npm package](https://www.npmjs.com/package/@agentcheck/cli), the [`@agentcheck/core` npm package](https://www.npmjs.com/package/@agentcheck/core), and the [AgentCheck extension on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=agentcheck.agentcheck-vscode).
 
 AgentCheck standardizes the manual review loop that usually follows an agent's “done” message:
 
@@ -23,22 +25,27 @@ AgentCheck preserves the real Git index and includes pre-existing tracked, stage
 
 ## Installation
 
-AgentCheck requires Node.js 22 or newer. The core package is `@agentcheck/core`; install the CLI from `@agentcheck/cli`:
+AgentCheck requires Node.js 22 or newer. Install the command-line product globally:
 
 ```bash
 npm install -g @agentcheck/cli
 ```
 
-Before npm publication, use a source checkout: run `npm install` and `npm run build`, then invoke `node packages/cli/dist/index.js`. VS Code Marketplace distribution is also a separate publication step. Until the extension is available there, build its local VSIX with `npm run package --workspace agentcheck-vscode` and install that file using VS Code's “Install from VSIX...” command.
+The npm package is named `@agentcheck/cli`; the executable it installs is intentionally named `agentcheck`.
 
 ## CLI usage
 
 ```bash
-agentcheck start  # create a checkpoint
-agentcheck        # review changes since the checkpoint
-agentcheck check  # explicit alias for review
-agentcheck clear  # remove the active checkpoint
+agentcheck start
+
+# run your coding agent
+
+agentcheck
+
+agentcheck clear
 ```
+
+`agentcheck check` is an explicit alias for the argumentless review command.
 
 Example output, abbreviated from the current CLI format:
 
@@ -87,7 +94,19 @@ The v0.1 analyzers cover migration-like files, sensitive configuration, reposito
 
 ## VS Code
 
+Install AgentCheck directly from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=agentcheck.agentcheck-vscode). The extension ID is `agentcheck.agentcheck-vscode`.
+
 The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Findings, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with details and evidence, risk, and verdict; file items open workspace files. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
+
+## Core library
+
+`@agentcheck/core` is the programmatic engine behind the CLI and VS Code extension:
+
+```bash
+npm install @agentcheck/core
+```
+
+Most command-line users should install `@agentcheck/cli` instead. See the [`@agentcheck/core` package documentation](packages/core/README.md) for its exported API.
 
 ## Privacy
 

@@ -17,7 +17,17 @@
     "typescript": "^5.9.2"
   },
   "version": "0.1.0",
-  "description": "Independent change verification for AI-assisted coding.",
+  "description": "Deterministic, local-first verification of coding-agent changes before you commit.",
+  "keywords": [
+    "ai",
+    "coding-agents",
+    "ai-assisted-development",
+    "code-review",
+    "developer-tools",
+    "git",
+    "local-first",
+    "verification"
+  ],
   "license": "Apache-2.0",
   "author": "emreordu",
   "repository": {

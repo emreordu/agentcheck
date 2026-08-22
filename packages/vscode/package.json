@@ -7,8 +7,12 @@
   "license": "Apache-2.0",
   "keywords": [
     "ai",
+    "coding-agents",
+    "ai-assisted-development",
     "code-review",
+    "developer-tools",
     "git",
+    "local-first",
     "verification"
   ],
   "engines": {

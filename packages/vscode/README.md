@@ -4,6 +4,8 @@
 
 AgentCheck provides deterministic post-agent verification. It creates a local Git-backed checkpoint, compares it with the current repository state, and shows what changed and what deserves attention.
 
+Install it from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=agentcheck.agentcheck-vscode). The extension ID is `agentcheck.agentcheck-vscode`.
+
 ## Workflow
 
 1. Run **AgentCheck: Create Checkpoint** before the coding agent starts.

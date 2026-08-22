@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "description": "Core checkpoint, change-detection, and deterministic analysis engine for AgentCheck.",
   "license": "Apache-2.0",
+  "keywords": [
+    "coding-agents",
+    "developer-tools",
+    "git",
+    "local-first",
+    "verification"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

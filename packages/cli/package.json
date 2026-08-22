@@ -1,13 +1,16 @@
 {
   "name": "@agentcheck/cli",
   "version": "0.1.0",
-  "description": "Independent change verification for AI-assisted coding.",
+  "description": "Deterministic, local-first verification of coding-agent changes before you commit.",
   "license": "Apache-2.0",
   "keywords": [
     "ai",
+    "coding-agents",
+    "ai-assisted-development",
     "code-review",
     "developer-tools",
     "git",
+    "local-first",
     "verification"
   ],
   "type": "module",
@@ -37,5 +40,8 @@
   "homepage": "https://github.com/emreordu/agentcheck#readme",
   "bugs": {
     "url": "https://github.com/emreordu/agentcheck/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
