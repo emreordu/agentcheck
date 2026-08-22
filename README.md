@@ -87,7 +87,7 @@ The v0.1 analyzers cover migration-like files, sensitive configuration, reposito
 
 ## VS Code
 
-The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Review, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with details and evidence, risk, and verdict; file items open workspace files. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
+The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Findings, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with details and evidence, risk, and verdict; file items open workspace files. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
 
 ## Privacy
 
