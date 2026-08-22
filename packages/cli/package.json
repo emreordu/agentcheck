@@ -1,6 +1,6 @@
 {
   "name": "@agentcheck/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic, local-first verification of coding-agent changes before you commit.",
   "license": "Apache-2.0",
   "keywords": [
@@ -30,7 +30,7 @@
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
-    "@agentcheck/core": "0.1.0"
+    "@agentcheck/core": "0.1.1"
   },
   "author": "emreordu",
   "repository": {
