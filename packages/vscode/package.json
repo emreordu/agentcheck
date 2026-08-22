@@ -68,14 +68,23 @@
   },
   "scripts": {
     "build": "node esbuild.mjs",
-	"test": "tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/findings-tree.test.js",
+    "test": "tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/findings-tree.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out agentcheck-vscode-0.1.0.vsix"
+    "package": "npm run build && vsce package --no-dependencies --out agentcheck-vscode-0.1.0.vsix"
   },
   "devDependencies": {
     "@agentcheck/core": "0.1.0",
     "@types/vscode": "^1.95.0",
     "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.25.0"
+  },
+  "author": "emreordu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emreordu/agentcheck.git"
+  },
+  "homepage": "https://github.com/emreordu/agentcheck#readme",
+  "bugs": {
+    "url": "https://github.com/emreordu/agentcheck/issues"
   }
 }

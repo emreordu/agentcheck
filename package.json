@@ -15,5 +15,17 @@
   "devDependencies": {
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2"
+  },
+  "version": "0.1.0",
+  "description": "Independent change verification for AI-assisted coding.",
+  "license": "Apache-2.0",
+  "author": "emreordu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emreordu/agentcheck.git"
+  },
+  "homepage": "https://github.com/emreordu/agentcheck#readme",
+  "bugs": {
+    "url": "https://github.com/emreordu/agentcheck/issues"
   }
 }

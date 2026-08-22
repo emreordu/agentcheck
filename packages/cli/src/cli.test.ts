@@ -138,6 +138,23 @@ test("check without a checkpoint returns a concise user-facing error", async () 
   }
 });
 
+test("a corrupted checkpoint returns an actionable user-facing error", async () => {
+  const repository = await createRepository({ "A.ts": "one\n" });
+  try {
+    await agentcheck(repository.path, ["start"]);
+    const checkpointPath = await gitText(repository.path, ["rev-parse", "--path-format=absolute", "--git-path", "agentcheck/checkpoint.json"]);
+    await writeFile(checkpointPath, "{not json}\n", "utf8");
+
+    const result = await agentcheck(repository.path, []);
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, "The active AgentCheck checkpoint is corrupted or unsupported.\n\nRun:\n  agentcheck clear\n  agentcheck start\n");
+    assert.doesNotMatch(result.stderr, /at |Error:/);
+  } finally {
+    await repository.cleanup();
+  }
+});
+
 test("clear removes the checkpoint and leaves the repository without a baseline", async () => {
   const repository = await createRepository({ "A.ts": "one\n" });
   try {

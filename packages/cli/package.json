@@ -23,10 +23,19 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "npm run build && node ../../scripts/prepare-package-docs.mjs",
-	"test": "npm run build && tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/cli.test.js",
+    "test": "npm run build && tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/cli.test.js",
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
     "@agentcheck/core": "0.1.0"
+  },
+  "author": "emreordu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emreordu/agentcheck.git"
+  },
+  "homepage": "https://github.com/emreordu/agentcheck#readme",
+  "bugs": {
+    "url": "https://github.com/emreordu/agentcheck/issues"
   }
 }

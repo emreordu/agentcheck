@@ -24,6 +24,7 @@ packages/cli/README.md
 .env.*
 !.env.example
 .npmrc
+/secret/
 
 # Logs
 *.log

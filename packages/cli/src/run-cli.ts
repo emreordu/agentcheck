@@ -75,6 +75,14 @@ async function runCheck(cwd: string, streams: CliStreams): Promise<number> {
   } catch (error) {
     if (hasMessage(error, "No active AgentCheck checkpoint")) {
       write(streams.stderr, "No active AgentCheck checkpoint.\n\nRun:\n  agentcheck start");
+    } else if (
+      hasMessage(error, "checkpoint metadata could not be read")
+      || hasMessage(error, "checkpoint metadata is invalid")
+    ) {
+      write(
+        streams.stderr,
+        "The active AgentCheck checkpoint is corrupted or unsupported.\n\nRun:\n  agentcheck clear\n  agentcheck start",
+      );
     } else {
       write(streams.stderr, formatFailure("AgentCheck could not review repository changes.", error));
     }
