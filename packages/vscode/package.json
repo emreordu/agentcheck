@@ -39,7 +39,7 @@
       },
       {
         "command": "agentcheck.showFindings",
-        "title": "Show Review",
+        "title": "Show Findings",
         "category": "AgentCheck"
       },
       {
@@ -86,5 +86,6 @@
   "homepage": "https://github.com/emreordu/agentcheck#readme",
   "bugs": {
     "url": "https://github.com/emreordu/agentcheck/issues"
-  }
+  },
+  "icon": "media/icon.png"
 }
