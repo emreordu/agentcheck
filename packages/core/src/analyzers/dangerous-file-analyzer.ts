@@ -48,12 +48,12 @@ function titleFor(kind: DangerousKind, deleted: boolean): string {
 
 function descriptionFor(kind: DangerousKind, change: FileChange): string {
   if (kind === "gitignore") {
-    return `${change.path} was ${describeChange(change.type)}. Ignored repository content may have changed.`;
+    return `Repository ignore rules were ${describeChange(change.type)} and may change which files Git reports. Review the affected patterns and expected generated or local files.`;
   }
   if (kind === "gitattributes") {
-    return `${change.path} was ${describeChange(change.type)}. Git path handling may have changed.`;
+    return `Git attribute rules were ${describeChange(change.type)} and may change path handling. Review line endings, merge behavior, and binary-file rules.`;
   }
-  return `${change.path} was ${describeChange(change.type)}. Automation or delivery behavior may have changed.`;
+  return `Automation configuration was ${describeChange(change.type)} and may change build, test, or delivery behavior. Review triggers, permissions, and referenced settings.`;
 }
 
 function describeChange(type: FileChange["type"]): string {

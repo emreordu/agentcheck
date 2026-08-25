@@ -77,8 +77,8 @@ test("argumentless check and check alias print the mixed-change summary", async 
       "────────────────────────────",
       "",
       "WARNING",
-      "Test attention",
-      "3 production source files changed. No related test files changed for the listed files.",
+      "Tests may need review",
+      "3 production source files changed without related changed test files for the listed paths. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.",
       "A.ts",
       "B.ts",
       "C.ts",
@@ -86,18 +86,21 @@ test("argumentless check and check alias print the mixed-change summary", async 
       "  - Production source files changed: 3",
       "  - Related test files changed: 0",
       "",
-      "1 item deserves attention.",
+      "1 finding reported.",
       "",
       "Risk",
       "────────────────────────────",
       "+3 Deleted file",
-      "+1 Test attention",
+      "+1 Tests may need review",
       "",
       "Score: 4 — MEDIUM",
+      "Based on 2 distinct risk signals; changed-file counts are shown separately.",
       "",
       "Verdict",
       "────────────────────────────",
       "REVIEW RECOMMENDED",
+      "AgentCheck found changes that deserve closer inspection before commit.",
+      "Review the highlighted findings and affected files.",
       "",
     ].join("\n");
 
@@ -261,9 +264,10 @@ test("reports deterministic M3 findings while preserving the real Git index", as
     assert.match(result.stdout, /WARNING\nProduction configuration changed/);
     assert.match(result.stdout, /WARNING\nDependency added/);
     assert.match(result.stdout, /Dependency: polly/);
-    assert.match(result.stdout, /3 items deserve attention\./);
+    assert.match(result.stdout, /3 findings reported\./);
     assert.match(result.stdout, /Score: 12 — HIGH/);
     assert.match(result.stdout, /CAREFUL REVIEW RECOMMENDED/);
+    assert.match(result.stdout, /One or more high-severity findings require careful inspection before commit\./);
 
     const migrationIndex = result.stdout.indexOf("Database migration added");
     const configurationIndex = result.stdout.indexOf("Production configuration changed");
@@ -310,7 +314,7 @@ test("reports complete M4 risk workflow without leaking a possible secret", asyn
     assert.match(result.stdout, /Possible secret/);
     assert.match(result.stdout, /Production configuration changed/);
     assert.match(result.stdout, /Dependency added/);
-    assert.match(result.stdout, /Test attention/);
+    assert.match(result.stdout, /Tests may need review/);
     assert.match(result.stdout, /Matched value: \*\*\*\*\*\*\*\*/);
     if (result.stdout.includes(fakeCredential)) {
       assert.fail("A fake credential was exposed in CLI output.");
@@ -320,9 +324,11 @@ test("reports complete M4 risk workflow without leaking a possible secret", asyn
     assert.match(result.stdout, /\+4 Production configuration/);
     assert.match(result.stdout, /\+3 Dependency addition/);
     assert.match(result.stdout, /\+3 Deleted file/);
-    assert.match(result.stdout, /\+1 Test attention/);
+    assert.match(result.stdout, /\+1 Tests may need review/);
     assert.match(result.stdout, /Score: 21 — HIGH/);
+    assert.match(result.stdout, /Based on 6 distinct risk signals; changed-file counts are shown separately\./);
     assert.match(result.stdout, /CAREFUL REVIEW RECOMMENDED/);
+    assert.match(result.stdout, /One or more high-severity findings require careful inspection before commit\./);
     assert.deepEqual(await readFile(indexPath), indexBefore);
 
     const repeated = await agentcheck(repository.path, []);
@@ -341,6 +347,8 @@ test("a small source change produces a low routine assessment without safety cla
     assert.equal(result.exitCode, 0);
     assert.match(result.stdout, /Score: 0 — LOW/);
     assert.match(result.stdout, /LOOKS ROUTINE/);
+    assert.match(result.stdout, /No high-risk patterns were detected\./);
+    assert.match(result.stdout, /Review the diff normally before committing\./);
     assert.doesNotMatch(result.stdout, /safe to commit|approved|ready to merge/i);
   } finally {
     await repository.cleanup();
@@ -381,9 +389,11 @@ test("production changes with related tests remain routine when analyzers report
 
     const result = await agentcheck(repository.path, []);
     assert.equal(result.exitCode, 0);
-    assert.doesNotMatch(result.stdout, /Test attention/);
+    assert.doesNotMatch(result.stdout, /Tests may need review/);
     assert.match(result.stdout, /Score: 0 — LOW/);
     assert.match(result.stdout, /LOOKS ROUTINE/);
+    assert.match(result.stdout, /No high-risk patterns were detected\./);
+    assert.match(result.stdout, /Review the diff normally before committing\./);
   } finally {
     await repository.cleanup();
   }
@@ -400,7 +410,7 @@ test("help, version, detached HEAD, unknown commands, and non-repository errors 
 
     assert.deepEqual(await agentcheck(repository.path, ["--version"]), {
       exitCode: 0,
-      stdout: "0.1.1\n",
+      stdout: "0.1.2\n",
       stderr: "",
     });
 

@@ -111,7 +111,7 @@ test("mixed post-checkpoint delta preserves the index and handles binary, CRLF, 
     assert.equal((await result.content.readAfter("same.ts"))?.toString(), sameAfter);
     assert.equal(result.findings.some((finding) => finding.files.includes("assets/binary.bin")), false);
     assert.equal(result.findings.some((finding) => finding.files.includes("line-ending.ts")), false);
-    assert.ok(result.findings.some((finding) => finding.title === "Test attention" && finding.files.includes("same.ts")));
+    assert.ok(result.findings.some((finding) => finding.title === "Tests may need review" && finding.files.includes("same.ts")));
     assert.ok(result.risk.contributions.some((contribution) => contribution.reason === "Deleted file"));
     assert.deepEqual(await readFile(indexPath), indexBefore);
   } finally {
@@ -186,7 +186,7 @@ test("multiple risk categories remain deterministic, category-deduplicated, and 
   assert.equal(first.filter((finding) => finding.category === "configuration").length, 2);
   assert.ok(first.some((finding) => finding.title === "Database migration added"));
   assert.ok(first.some((finding) => finding.title === "Dependency added"));
-  assert.ok(first.some((finding) => finding.title === "Test attention"));
+  assert.ok(first.some((finding) => finding.title === "Tests may need review"));
 
   const risk = assessRisk({ files: changes }, first);
   assert.deepEqual(risk, {
@@ -197,7 +197,7 @@ test("multiple risk categories remain deterministic, category-deduplicated, and 
       { reason: "Production configuration", points: 4 },
       { reason: "Dependency addition", points: 3 },
       { reason: "Deleted file", points: 3 },
-      { reason: "Test attention", points: 1 },
+      { reason: "Tests may need review", points: 1 },
     ],
   });
   assert.equal(verdictForReview(risk.level, first), "CAREFUL REVIEW RECOMMENDED");
@@ -257,7 +257,7 @@ test("a standalone high finding cannot produce a routine verdict even below the 
     severity: "high",
     category: "database",
     title: "Database migration added",
-    description: "A migration-related file was added.",
+    description: "A migration-related file was added. Review schema changes, destructive operations, data transformations, and rollback implications.",
     files: ["Migrations/Add.sql"],
   };
   const risk = assessRisk({ files: [] }, [finding]);

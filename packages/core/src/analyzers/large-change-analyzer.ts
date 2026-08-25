@@ -16,7 +16,7 @@ export class LargeChangeAnalyzer implements Analyzer {
         severity: "warning",
         category: "large-change",
         title: "Large change set",
-        description: `${context.changes.files.length} files changed since checkpoint. Large change sets are harder to review reliably.`,
+        description: `${context.changes.files.length} files changed since checkpoint. Review the change set in manageable groups and confirm that its scope is intentional.`,
         files: [],
         evidence: [`Changed file threshold: ${LARGE_CHANGE_THRESHOLDS.changedFiles}`],
       });
@@ -31,7 +31,7 @@ export class LargeChangeAnalyzer implements Analyzer {
         severity: "warning",
         category: "large-change",
         title: "Large file added",
-        description: `${change.path} was added with a size of ${formatBytes(content.byteLength)}.`,
+        description: `${change.path} was added with a size of ${formatBytes(content.byteLength)}. Confirm that the file belongs in the repository and does not make reviews or distribution unnecessarily heavy.`,
         files: [change.path],
         evidence: [
           `Added file size: ${content.byteLength} bytes`,

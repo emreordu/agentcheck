@@ -157,7 +157,7 @@ function toFinding(change: FileChange, signal: SecretSignal): Finding {
     severity: "high",
     category: "secret",
     title: "Possible secret",
-    description: `${signal.label} was introduced in changed text.`,
+    description: `${signal.label} was introduced in changed text. Confirm that it is not a credential that should be stored outside version control.`,
     files: [change.path],
     evidence: [
       `Signal: ${signal.label}`,

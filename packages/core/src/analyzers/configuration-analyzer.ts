@@ -46,10 +46,19 @@ function toFinding(change: FileChange): Finding {
     severity,
     category: "configuration",
     title,
-    description: `${change.path} was ${describeChange(change.type)}. Manual review is recommended.`,
+    description: descriptionFor(change, production, deleted),
     files: [change.path],
     evidence: [`Change type: ${change.type}`],
   };
+}
+
+function descriptionFor(change: FileChange, production: boolean, deleted: boolean): string {
+  if (deleted) {
+    return "A configuration file was deleted. Confirm that runtime, deployment, or automation settings do not still depend on it.";
+  }
+
+  const scope = production ? "Production runtime configuration" : "Runtime configuration";
+  return `${scope} was ${describeChange(change.type)}. Review the diff for environment-specific values, credentials, URLs, feature flags, or behavior changes.`;
 }
 
 function isProductionPath(path: string): boolean {

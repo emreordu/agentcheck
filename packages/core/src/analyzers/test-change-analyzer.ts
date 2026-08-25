@@ -118,8 +118,8 @@ function toFileFinding(change: FileChange, changedLines: number, productionFiles
   return {
     severity: "warning",
     category: "test-attention",
-    title: "Test attention",
-    description: `${change.path} has a substantial production-source change. No related test files changed.`,
+    title: "Tests may need review",
+    description: "A substantial production-source change has no related changed test file. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.",
     files: [change.path],
     evidence: [
       `Production lines changed: ${changedLines}`,
@@ -133,8 +133,8 @@ function toBreadthFinding(changes: readonly ProductionChange[], productionFiles:
   return {
     severity: "warning",
     category: "test-attention",
-    title: "Test attention",
-    description: `${productionFiles} production source files changed. No related test files changed for the listed files.`,
+    title: "Tests may need review",
+    description: `${productionFiles} production source files changed without related changed test files for the listed paths. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.`,
     files: changes.map(({ change }) => change.path).sort((left, right) => left.localeCompare(right, "en")),
     evidence: [
       `Production source files changed: ${productionFiles}`,

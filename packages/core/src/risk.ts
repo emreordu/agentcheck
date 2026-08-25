@@ -70,7 +70,7 @@ const RISK_RULES: readonly RiskRule[] = [
     applies: (_, findings) => findings.some((finding) => finding.category === "large-change"),
   },
   {
-    reason: "Test attention",
+    reason: "Tests may need review",
     points: RISK_WEIGHTS.testAttention,
     applies: (_, findings) => findings.some((finding) => finding.category === "test-attention"),
   },

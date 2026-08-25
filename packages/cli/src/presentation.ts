@@ -56,6 +56,9 @@ function formatRisk(risk: RiskAssessment): string {
     ...risk.contributions.map((contribution) => `+${contribution.points} ${contribution.reason}`),
     ...(risk.contributions.length > 0 ? [""] : []),
     `Score: ${risk.score} — ${risk.level.toUpperCase()}`,
+    risk.contributions.length === 0
+      ? "No scored risk signals; changed-file counts are shown separately."
+      : `Based on ${risk.contributions.length} distinct ${risk.contributions.length === 1 ? "risk signal" : "risk signals"}; changed-file counts are shown separately.`,
   ].join("\n");
 }
 
@@ -64,15 +67,31 @@ function formatVerdict(verdict: Verdict): string {
     "Verdict",
     RULE,
     verdict,
+    ...VERDICT_GUIDANCE[verdict],
   ].join("\n");
 }
+
+const VERDICT_GUIDANCE: Record<Verdict, readonly string[]> = {
+  "LOOKS ROUTINE": [
+    "No high-risk patterns were detected.",
+    "Review the diff normally before committing.",
+  ],
+  "REVIEW RECOMMENDED": [
+    "AgentCheck found changes that deserve closer inspection before commit.",
+    "Review the highlighted findings and affected files.",
+  ],
+  "CAREFUL REVIEW RECOMMENDED": [
+    "One or more high-severity findings require careful inspection before commit.",
+    "Review the highlighted findings and affected files.",
+  ],
+};
 
 function formatFindings(findings: readonly Finding[]): string {
   if (findings.length === 0) {
     return [
       "Findings",
       RULE,
-      "✓ No notable deterministic findings.",
+      "✓ No deterministic review findings.",
     ].join("\n");
   }
 
@@ -92,7 +111,7 @@ function formatFindings(findings: readonly Finding[]): string {
     "",
     entries.join("\n\n"),
     "",
-    `${findings.length} ${findings.length === 1 ? "item deserves" : "items deserve"} attention.`,
+    `${findings.length} ${findings.length === 1 ? "finding" : "findings"} reported.`,
   ].join("\n");
 }
 

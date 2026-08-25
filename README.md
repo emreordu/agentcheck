@@ -69,12 +69,12 @@ Findings
 
 HIGH
 Database migration added
-A migration-related file was added.
+A migration-related file was added. Review schema changes, destructive operations, data transformations, and rollback implications.
 Migrations/20260819_AddOrderIndex.cs
 
 WARNING
 Production configuration changed
-appsettings.Production.json was modified. Manual review is recommended.
+Production runtime configuration was modified. Review the diff for environment-specific values, credentials, URLs, feature flags, or behavior changes.
 appsettings.Production.json
 
 Risk
@@ -83,11 +83,24 @@ Risk
 +4 Production configuration
 
 Score: 9 — HIGH
+Based on 2 distinct risk signals; changed-file counts are shown separately.
 
 Verdict
 ────────────────────────────
 CAREFUL REVIEW RECOMMENDED
+One or more high-severity findings require careful inspection before commit.
+Review the highlighted findings and affected files.
 ```
+
+### Finding message guidelines
+
+Analyzer messages distinguish observed facts from review guidance:
+
+- **Title:** a short, specific noun/action phrase, such as `Database migration added`.
+- **Description:** why the deterministic signal may matter and, when useful, what to inspect.
+- **Evidence:** only facts AgentCheck observed, such as a change type, manifest section, or detected signal; it does not contain interpretation or secret values.
+
+Messages use neutral language such as “may change” when AgentCheck cannot determine the semantic impact.
 
 ## What it checks
 

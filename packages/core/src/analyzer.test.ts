@@ -233,6 +233,20 @@ test("analyzeChanges caches content reads and sorts findings deterministically",
   ]);
 });
 
+test("finding descriptions give bounded review direction", async () => {
+  const configuration = await new ConfigurationAnalyzer().analyze(context([
+    changed("modified", ".env"),
+    changed("deleted", "terraform/main.tf"),
+  ]));
+  assert.match(configuration[0]?.description ?? "", /environment-specific values, credentials, URLs, feature flags/);
+  assert.match(configuration[1]?.description ?? "", /Confirm that runtime, deployment, or automation settings/);
+
+  const migration = await new MigrationAnalyzer().analyze(context([
+    changed("created", "Migrations/20260825_AddOrders.sql"),
+  ]));
+  assert.match(migration[0]?.description ?? "", /schema changes, destructive operations, data transformations, and rollback implications/);
+});
+
 function analyzer(name: string, analyze: Analyzer["analyze"]): Analyzer {
   return { name, analyze };
 }

@@ -96,8 +96,9 @@ test("TestChangeAnalyzer reports substantial production changes without related 
     { [path]: lines("after", 20) },
   ));
   assert.equal(findings.length, 1);
-  assert.equal(findings[0]?.title, "Test attention");
-  assert.match(findings[0]?.description ?? "", /No related test files changed\./);
+  assert.equal(findings[0]?.title, "Tests may need review");
+  assert.match(findings[0]?.description ?? "", /no related changed test file/i);
+  assert.match(findings[0]?.description ?? "", /changed behavior remains covered/);
   assert.doesNotMatch(findings[0]?.description ?? "", /There are no tests|untested/i);
 });
 
@@ -268,7 +269,7 @@ test("risk assessment applies production config, dependency, CI, large-change, d
       finding("dependency", "Dependency added"),
       finding("dangerous-file", "CI/CD configuration changed"),
       finding("large-change", "Large change set"),
-      finding("test-attention", "Test attention"),
+      finding("test-attention", "Tests may need review"),
     ],
   );
   assert.deepEqual(assessment, {
@@ -280,7 +281,7 @@ test("risk assessment applies production config, dependency, CI, large-change, d
       { reason: "Deleted file", points: 3 },
       { reason: "CI/CD change", points: 2 },
       { reason: "Unusually large change", points: 2 },
-      { reason: "Test attention", points: 1 },
+      { reason: "Tests may need review", points: 1 },
     ],
   });
 });
