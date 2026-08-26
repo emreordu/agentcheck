@@ -110,7 +110,14 @@ function parsePackageJson(content: string): DependencyEntry[] {
 function parseXmlItems(content: string, elementName: string): DependencyEntry[] {
   const dependencies: DependencyEntry[] = [];
   const elementPattern = new RegExp(`<${elementName}\\b[^>]*>`, "gi");
-  const uncommentedContent = content.replace(/<!--[\s\S]*?-->/g, "");
+
+  let uncommentedContent = content;
+  let previous: string;
+
+  do {
+    previous = uncommentedContent;
+    uncommentedContent = uncommentedContent.replace(/<!--[\s\S]*?-->/g, "");
+  } while (uncommentedContent !== previous);
 
   for (const match of uncommentedContent.matchAll(elementPattern)) {
     const element = match[0];
