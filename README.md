@@ -4,6 +4,10 @@
 
 Deterministic, local-first verification of coding-agent changes before you commit.
 
+Create a checkpoint with `agentcheck start`, let your coding agent work, then run `agentcheck` to review the change set locally before committing.
+
+![AgentCheck interactive review showing changes, findings, risk, and verdict](docs/assets/agentcheck-review.png)
+
 Available as the [`@agentcheck/cli` npm package](https://www.npmjs.com/package/@agentcheck/cli), the [`@agentcheck/core` npm package](https://www.npmjs.com/package/@agentcheck/core), and the [AgentCheck extension on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=agentcheck.agentcheck-vscode).
 
 AgentCheck standardizes the manual review loop that usually follows an agent's “done” message:
@@ -54,49 +58,7 @@ agentcheck clear
 
 `agentcheck check` is an explicit alias for the argumentless review command.
 
-Example output, abbreviated from the current CLI format:
-
-```text
-AgentCheck
-
-Changes
-────────────────────────────
-1 modified
-2 created
-0 deleted
-0 renamed
-
-M  appsettings.Production.json
-A  Migrations/20260819_AddOrderIndex.cs
-A  src/OrderService.test.ts
-
-Findings
-────────────────────────────
-
-HIGH
-Database migration added
-A migration-related file was added. Review schema changes, destructive operations, data transformations, and rollback implications.
-Migrations/20260819_AddOrderIndex.cs
-
-WARNING
-Production configuration changed
-Production runtime configuration was modified. Review the diff for environment-specific values, credentials, URLs, feature flags, or behavior changes.
-appsettings.Production.json
-
-Risk
-────────────────────────────
-+5 Database migration
-+4 Production configuration
-
-Score: 9 — HIGH
-Based on 2 distinct risk signals; changed-file counts are shown separately.
-
-Verdict
-────────────────────────────
-CAREFUL REVIEW RECOMMENDED
-One or more high-severity findings require careful inspection before commit.
-Review the highlighted findings and affected files.
-```
+The interactive report uses terminal-aware wrapping, compact findings, severity summaries, and an actionable verdict. `NO_COLOR` keeps the same textual information; redirected output remains plain and deterministic.
 
 ### Finding message guidelines
 

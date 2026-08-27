@@ -4,6 +4,10 @@ Deterministic, local-first verification of coding-agent changes before you commi
 
 AgentCheck CLI creates a Git-backed checkpoint, compares it with the repository state after your coding agent finishes, and reports changes, deterministic findings, a transparent risk score, and a restrained verdict for human review.
 
+Create a checkpoint, let the coding agent work, then review locally before committing:
+
+![AgentCheck interactive review showing changes, findings, risk, and verdict](https://raw.githubusercontent.com/emreordu/agentcheck/main/docs/assets/agentcheck-review.png)
+
 ## Installation
 
 AgentCheck requires Node.js 22 or newer:
