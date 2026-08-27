@@ -22,6 +22,12 @@ import type {
 } from "./types.ts";
 
 const CHECKPOINT_FILE = "checkpoint.json";
+const SENSITIVE_IGNORED_PATHS = [
+  ":(glob,icase).env",
+  ":(glob,icase).env.*",
+  ":(glob,icase)**/.env",
+  ":(glob,icase)**/.env.*",
+] as const;
 
 export async function createCheckpoint(cwd = process.cwd()): Promise<Checkpoint> {
   const repository = await resolveRepository(cwd);
@@ -94,6 +100,7 @@ async function createSnapshotForRepository(repository: GitRepository): Promise<S
   try {
     await runGit(repository.root, ["read-tree", "HEAD"], { env });
     await runGit(repository.root, ["add", "-A", "--", "."], { env });
+    await addIgnoredSensitiveFiles(repository, env);
     const tree = (await runGit(repository.root, ["write-tree"], { env })).toString("utf8").trim();
     return { head, branch, tree };
   } finally {
@@ -101,6 +108,26 @@ async function createSnapshotForRepository(repository: GitRepository): Promise<S
   }
 }
 
+async function addIgnoredSensitiveFiles(repository: GitRepository, env: NodeJS.ProcessEnv): Promise<void> {
+  const output = await runGit(repository.root, [
+    "ls-files",
+    "--others",
+    "--ignored",
+    "--exclude-standard",
+    "-z",
+    "--",
+    ...SENSITIVE_IGNORED_PATHS,
+  ]);
+  const paths = splitNullDelimited(output).filter(isSensitiveIgnoredPath);
+  if (paths.length === 0) return;
+
+  await runGit(repository.root, ["add", "-f", "--", ...paths.map((path) => ":(literal)" + path)], { env });
+}
+
+function isSensitiveIgnoredPath(path: string): boolean {
+  const basename = path.replaceAll("\\", "/").split("/").at(-1)?.toLowerCase() ?? "";
+  return basename === ".env" || basename.startsWith(".env.");
+}
 async function diffTrees(
   repository: GitRepository,
   beforeTree: string,

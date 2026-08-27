@@ -15,13 +15,19 @@ configuration, tests and secrets → developer review → commit
 
 It creates a Git-backed checkpoint, compares that checkpoint with the current repository state, and reports deterministic findings, a transparent risk score, and a restrained verdict.
 
+## v0.1.3 highlights
+
+- A polished interactive CLI with semantic color, TTY-only progress, elapsed timing, and deterministic non-TTY output.
+- Migration-oriented SQL filenames are detected outside conventional migration directories without classifying ordinary SQL files as migrations.
+- Ignored `.env` and `.env.*` files participate in review snapshots through AgentCheck's temporary index; other ignored files remain excluded.
+
 ## How it works
 
 ```text
 agentcheck start → coding agent → agentcheck → review → commit
 ```
 
-AgentCheck preserves the real Git index. Each checkpoint baseline represents `HEAD` plus the Git-visible working-tree state at that moment: pre-existing staged and unstaged tracked changes, tracked deletions, and non-ignored untracked files. See [SEMANTICS.md](SEMANTICS.md) for the exact model.
+AgentCheck preserves the real Git index. Each checkpoint baseline represents `HEAD` plus the Git-visible working-tree state at that moment: pre-existing staged and unstaged tracked changes, tracked deletions, and non-ignored untracked files, with a narrow ignored `.env`/`.env.*` exception. See [SEMANTICS.md](SEMANTICS.md) for the exact model.
 
 ## Installation
 

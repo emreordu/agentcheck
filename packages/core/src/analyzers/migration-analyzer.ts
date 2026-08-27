@@ -17,11 +17,15 @@ function isMigrationPath(path: string): boolean {
 
   if (segments.includes("migrations")) return true;
   if (basename === "migration.sql" || basename === "schema.sql") return true;
+  if (isMigrationSqlFilename(basename)) return true;
   if (normalized.endsWith("prisma/schema.prisma")) return true;
   if (/(^|\/)db\/migration\/(v|r|u)\d.*__.+\.sql$/.test(normalized)) return true;
   return /(^|\/)[^/]*(database-)?changelog[^/]*\.(xml|ya?ml|json|sql)$/.test(normalized);
 }
 
+function isMigrationSqlFilename(basename: string): boolean {
+  return basename.endsWith(".sql") && (basename.includes("migration") || basename.includes("migrate"));
+}
 function toFinding(change: FileChange): Finding {
   const action = actionFor(change.type);
   return {

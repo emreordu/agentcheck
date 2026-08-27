@@ -91,6 +91,48 @@ test("reports created, deleted, renamed, and space-containing paths while exclud
   }
 });
 
+test("includes ignored .env files without including ordinary ignored paths or mutating Git state", async () => {
+  const repository = await createRepository({
+    ".gitignore": ".env\n.env.production\nnode_modules/\ndist/\nobj/\n",
+  });
+  try {
+    await createCheckpoint(repository.path);
+    await write(repository.path, ".env", "MODE=development\n");
+    await write(repository.path, ".env.production", "MODE=production\n");
+    await write(repository.path, "node_modules/example/index.js", "ignored\n");
+    await write(repository.path, "dist/app.js", "ignored\n");
+    await write(repository.path, "obj/generated.cs", "ignored\n");
+
+    const indexPath = await gitText(repository.path, ["rev-parse", "--path-format=absolute", "--git-path", "index"]);
+    const indexBefore = await readFile(indexPath);
+    const statusBefore = await git(repository.path, ["status", "--porcelain=v1", "-z", "--ignored"]);
+    const gitignoreBefore = await readFile(join(repository.path, ".gitignore"), "utf8");
+
+    const result = await reviewChanges(repository.path);
+    assert.deepEqual(result.changes.files, [
+      { type: "created", path: ".env" },
+      { type: "created", path: ".env.production" },
+    ]);
+    assert.equal((await result.content.readAfter(".env"))?.toString(), "MODE=development\n");
+    assert.ok(result.findings.some((finding) => finding.category === "configuration" && finding.files.includes(".env")));
+    assert.deepEqual(result.risk, {
+      score: 4,
+      level: "medium",
+      contributions: [{ reason: "Production configuration", points: 4 }],
+    });
+    await clearCheckpoint(repository.path);
+    await createCheckpoint(repository.path);
+    await write(repository.path, ".env", "MODE=changed\n");
+    assert.deepEqual((await reviewChanges(repository.path)).changes.files, [
+      { type: "modified", path: ".env" },
+    ]);
+    assert.deepEqual(await readFile(indexPath), indexBefore);
+    assert.deepEqual(await git(repository.path, ["status", "--porcelain=v1", "-z", "--ignored"]), statusBefore);
+    assert.equal(await readFile(join(repository.path, ".gitignore"), "utf8"), gitignoreBefore);
+  } finally {
+    await repository.cleanup();
+  }
+});
 test("supports detached HEAD and invocation from a repository subdirectory", async () => {
   const repository = await createRepository({ "src/A.ts": "one\n" });
   try {

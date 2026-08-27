@@ -29,6 +29,29 @@ test("MigrationAnalyzer detects added and modified migration conventions only", 
   ]);
 });
 
+test("MigrationAnalyzer detects migration-oriented SQL filenames without classifying ordinary SQL", async () => {
+  const findings = await new MigrationAnalyzer().analyze(context([
+    changed("created", "Fake_Migration_2026-08-26.sql"),
+    changed("created", "packages/core/Fake_Migration_2026-08-26.sql"),
+    changed("created", "packages/core/src/AddCustomerMigration.sql"),
+    changed("created", "database-migration.sql"),
+    changed("created", "migrate-users.sql"),
+    changed("created", "report.sql"),
+    changed("created", "customer_query.sql"),
+    changed("created", "seed-data.sql"),
+    changed("created", "stored-procedures.sql"),
+    changed("created", "cleanup.sql"),
+    changed("created", "notes/migration-plan.md"),
+  ]));
+
+  assert.deepEqual(findings.map((finding) => finding.files[0]), [
+    "Fake_Migration_2026-08-26.sql",
+    "packages/core/Fake_Migration_2026-08-26.sql",
+    "packages/core/src/AddCustomerMigration.sql",
+    "database-migration.sql",
+    "migrate-users.sql",
+  ]);
+});
 test("ConfigurationAnalyzer recognizes supported configuration paths with deterministic severity", async () => {
   const findings = await new ConfigurationAnalyzer().analyze(context([
     changed("modified", "appsettings.json"),

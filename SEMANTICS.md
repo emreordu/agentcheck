@@ -251,7 +251,7 @@ ile tree object'e dönüştürülür.
 
 v0.1 semantiği:
 
-> Git tarafından ignored kabul edilen untracked dosyalar checkpoint veya current snapshot'a dahil edilmez.
+> Git tarafından ignored kabul edilen untracked dosyalar checkpoint veya current snapshot'a dahil edilmez; `.env` ve `.env.*` istisnadır.
 
 Örnek kapsam dışı dosyalar:
 
@@ -268,9 +268,7 @@ Ancak kesin davranış repository'nin `.gitignore`, global ignore ve Git ignore 
 
 Önemli sonuç:
 
-Yeni oluşturulmuş fakat ignored bir `.env` dosyası v0.1'de repository change olarak raporlanmayabilir.
-
-Bu bilinçli bir limitation'dır.
+AgentCheck, yalnızca `.env` ve `.env.*` dosyalarını Git'in ignored-path sorgusuyla hedefleyip geçici index'e ekler. Bu dosyalar normal change/analyzer akışına katılır; gerçek Git index'i etkilenmez.
 
 AgentCheck v0.1 ignored directory'leri recursive tarayarak kendi alternatif repository modeli oluşturmamalıdır.
 

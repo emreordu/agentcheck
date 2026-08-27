@@ -1,10 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { clearCheckpoint, createCheckpoint, GitError, reviewChanges } from "@agentcheck/core";
-import { formatCheckpointCreated, formatHelp, formatReview } from "./presentation.ts";
+import { createProgress } from "./progress.ts";
+import { formatCheckpointCreated, formatHelp, formatReview, type PresentationOptions } from "./presentation.ts";
 
 interface CliStreams {
-  stdout: Pick<NodeJS.WriteStream, "write">;
-  stderr: Pick<NodeJS.WriteStream, "write">;
+  stdout: Pick<NodeJS.WriteStream, "write" | "isTTY" | "columns">;
+  stderr: Pick<NodeJS.WriteStream, "write" | "isTTY" | "columns">;
 }
 
 const defaultStreams: CliStreams = {
@@ -46,16 +47,21 @@ export async function runCli(
     }
   }
 
-  write(streams.stderr, `Unknown command: ${args.join(" ")}\n\nRun:\n  agentcheck --help`);
+  write(streams.stderr, "Unknown command: " + args.join(" ") + "\n\nRun:\n  agentcheck --help");
   return 1;
 }
 
 async function runStart(cwd: string, streams: CliStreams): Promise<number> {
+  const options = presentationOptions(streams);
+  const startedAt = Date.now();
+  const progress = createProgress(streams.stderr, "Capturing repository baseline...", options);
   try {
     const checkpoint = await createCheckpoint(cwd);
-    write(streams.stdout, formatCheckpointCreated(checkpoint.branch, checkpoint.head));
+    progress.stop();
+    write(streams.stdout, formatCheckpointCreated(checkpoint.branch, checkpoint.head, withDuration(options, startedAt)));
     return 0;
   } catch (error) {
+    progress.stop();
     if (hasMessage(error, "active AgentCheck checkpoint already exists")) {
       write(
         streams.stderr,
@@ -69,10 +75,16 @@ async function runStart(cwd: string, streams: CliStreams): Promise<number> {
 }
 
 async function runCheck(cwd: string, streams: CliStreams): Promise<number> {
+  const options = presentationOptions(streams);
+  const startedAt = Date.now();
+  const progress = createProgress(streams.stderr, "Analyzing repository...", options);
   try {
-    write(streams.stdout, formatReview(await reviewChanges(cwd)));
+    const result = await reviewChanges(cwd);
+    progress.stop();
+    write(streams.stdout, formatReview(result, withDuration(options, startedAt)));
     return 0;
   } catch (error) {
+    progress.stop();
     if (hasMessage(error, "No active AgentCheck checkpoint")) {
       write(streams.stderr, "No active AgentCheck checkpoint.\n\nRun:\n  agentcheck start");
     } else if (
@@ -113,7 +125,7 @@ async function readPackageVersion(): Promise<string> {
 }
 
 function formatFailure(summary: string, error: unknown): string {
-  return `${summary}\n\nReason:\n${formatReason(error)}`;
+  return summary + "\n\nReason:\n" + formatReason(error);
 }
 
 function formatReason(error: unknown): string {
@@ -148,5 +160,15 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 }
 
 function write(stream: Pick<NodeJS.WriteStream, "write">, message: string): void {
-  stream.write(`${message}\n`);
+  stream.write(message + "\n");
+}
+
+function presentationOptions(streams: CliStreams): PresentationOptions {
+  const interactive = streams.stdout.isTTY === true && streams.stderr.isTTY === true;
+  const width = interactive && typeof streams.stdout.columns === "number" ? streams.stdout.columns : undefined;
+  return { interactive, color: interactive && !("NO_COLOR" in process.env), width };
+}
+
+function withDuration(options: PresentationOptions, startedAt: number): PresentationOptions {
+  return { ...options, durationMs: Date.now() - startedAt };
 }

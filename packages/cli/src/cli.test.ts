@@ -4,6 +4,9 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import type { ReviewResult } from "@agentcheck/core";
+import { formatReview } from "./presentation.ts";
+import { createProgress } from "./progress.ts";
 
 interface CommandResult {
   exitCode: number;
@@ -58,57 +61,17 @@ test("argumentless check and check alias print the mixed-change summary", async 
     await rm(join(repository.path, "D.ts"));
     await write(repository.path, "E.ts", "rename unchanged\n");
 
-    const expected = [
-      "AgentCheck",
-      "",
-      "Changes",
-      "────────────────────────────",
-      "1 modified",
-      "1 created",
-      "1 deleted",
-      "1 renamed",
-      "",
-      "M  A.ts",
-      "A  B.ts",
-      "D  C.ts",
-      "R  D.ts → E.ts",
-      "",
-      "Findings",
-      "────────────────────────────",
-      "",
-      "WARNING",
-      "Tests may need review",
-      "3 production source files changed without related changed test files for the listed paths. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.",
-      "A.ts",
-      "B.ts",
-      "C.ts",
-      "Evidence:",
-      "  - Production source files changed: 3",
-      "  - Related test files changed: 0",
-      "",
-      "1 finding reported.",
-      "",
-      "Risk",
-      "────────────────────────────",
-      "+3 Deleted file",
-      "+1 Tests may need review",
-      "",
-      "Score: 4 — MEDIUM",
-      "Based on 2 distinct risk signals; changed-file counts are shown separately.",
-      "",
-      "Verdict",
-      "────────────────────────────",
-      "REVIEW RECOMMENDED",
-      "AgentCheck found changes that deserve closer inspection before commit.",
-      "Review the highlighted findings and affected files.",
-      "",
-    ].join("\n");
-
     const defaultCheck = await agentcheck(repository.path, []);
-    assert.deepEqual(defaultCheck, { exitCode: 0, stdout: expected, stderr: "" });
+    assert.equal(defaultCheck.exitCode, 0);
+    assert.equal(defaultCheck.stderr, "");
+    assert.match(defaultCheck.stdout, /1 finding · 1 WARNING/);
+    assert.match(defaultCheck.stdout, /◆  WARNING  Tests may need review/);
+    assert.match(defaultCheck.stdout, /  A\.ts\n  B\.ts\n  C\.ts/);
+    assert.match(defaultCheck.stdout, /1 WARNING · Risk MEDIUM \(4\)/);
+    assert.match(defaultCheck.stdout, /→ Deleted file\n→ Tests may need review/);
 
     const aliasCheck = await agentcheck(repository.path, ["check"]);
-    assert.deepEqual(aliasCheck, { exitCode: 0, stdout: expected, stderr: "" });
+    assert.deepEqual(aliasCheck, defaultCheck);
   } finally {
     await repository.cleanup();
   }
@@ -260,11 +223,11 @@ test("reports deterministic M3 findings while preserving the real Git index", as
     assert.equal(result.exitCode, 0);
     assert.equal(result.stderr, "");
     assert.match(result.stdout, /3 modified\n1 created\n0 deleted\n0 renamed/);
-    assert.match(result.stdout, /HIGH\nDatabase migration added/);
-    assert.match(result.stdout, /WARNING\nProduction configuration changed/);
-    assert.match(result.stdout, /WARNING\nDependency added/);
+    assert.match(result.stdout, /▲  HIGH  Database migration added/);
+    assert.match(result.stdout, /◆  WARNING  Production configuration changed/);
+    assert.match(result.stdout, /◆  WARNING  Dependency added/);
     assert.match(result.stdout, /Dependency: polly/);
-    assert.match(result.stdout, /3 findings reported\./);
+    assert.match(result.stdout, /3 findings · 1 HIGH · 2 WARNING/);
     assert.match(result.stdout, /Score: 12 — HIGH/);
     assert.match(result.stdout, /CAREFUL REVIEW RECOMMENDED/);
     assert.match(result.stdout, /One or more high-severity findings require careful inspection before commit\./);
@@ -410,7 +373,7 @@ test("help, version, detached HEAD, unknown commands, and non-repository errors 
 
     assert.deepEqual(await agentcheck(repository.path, ["--version"]), {
       exitCode: 0,
-      stdout: "0.1.2\n",
+      stdout: "0.1.3\n",
       stderr: "",
     });
 
@@ -430,6 +393,187 @@ test("help, version, detached HEAD, unknown commands, and non-repository errors 
     await rm(outsideRepository, { force: true, recursive: true });
   }
 });
+
+
+test("interactive presentation adds hierarchy and colors without changing result text", () => {
+  const result = sampleReviewResult();
+  const output = formatReview(result, { interactive: true, color: true, durationMs: 384 });
+
+  assert.match(output, /AGENTCHECK/);
+  assert.match(output, /▲  HIGH/);
+  assert.match(output, /⚠  CAREFUL REVIEW RECOMMENDED/);
+  assert.match(output, /Database migration added/);
+  assert.match(output, /CAREFUL REVIEW RECOMMENDED/);
+  assert.match(output, /Review completed in 384ms/);
+  assert.match(output, /\u001B\[/);
+});
+
+test("interactive presentation keeps decision-bearing prose readable", () => {
+  const output = formatReview(sampleReviewResult(), { interactive: true, color: true });
+
+  assert.match(output, /\u001B\[1;91m▲  HIGH/);
+  assert.match(output, /\u001B\[1;33m◆  WARNING/);
+  assert.match(output, /\u001B\[1;32mA/);
+  assert.match(output, /\u001B\[2m╭/);
+  assert.doesNotMatch(output, /\u001B\[2mA migration-related file was added/);
+  assert.doesNotMatch(output, /\u001B\[2mOne or more high-severity findings/);
+});
+test("NO_COLOR-style rendering keeps the rich report readable without ANSI sequences", () => {
+  const output = formatReview(sampleReviewResult(), { interactive: true, color: false });
+
+  assert.match(output, /◈ Review/);
+  assert.match(output, /◆  WARNING/);
+  assert.match(output, /╭/);
+  assert.doesNotMatch(output, /\u001B\[/);
+});
+
+test("presentation summarizes severity counts and distinct review topics", () => {
+  const sample = sampleReviewResult();
+  const result: ReviewResult = {
+    ...sample,
+    findings: [
+      ...sample.findings,
+      {
+        severity: "warning",
+        category: "configuration",
+        title: "Configuration file deleted",
+        description: "A configuration file was deleted.",
+        files: ["config/legacy.json"],
+      },
+      {
+        severity: "info",
+        category: "dependency",
+        title: "Dependency configuration changed",
+        description: "A dependency manifest changed.",
+        files: ["package-lock.json"],
+      },
+    ],
+  };
+
+  const output = formatReview(result, { interactive: false, color: false, width: 88 });
+
+  assert.match(output, /4 findings · 1 HIGH · 2 WARNINGS · 1 INFO/);
+  assert.match(output, /1 HIGH · 2 WARNINGS · 1 INFO · Risk HIGH \(9\)/);
+  assert.doesNotMatch(output, /\/10/);
+  assert.doesNotMatch(output, /Review the highlighted findings and affected files\./);
+  assert.equal((output.match(/→ Configuration changes/g) ?? []).length, 1);
+  assert.match(output, /→ Database migration/);
+  assert.match(output, /→ Dependency changes/);
+
+  const pluralResult: ReviewResult = {
+    ...result,
+    findings: [
+      ...result.findings,
+      {
+        severity: "high",
+        category: "secret",
+        title: "Possible secret",
+        description: "A possible secret was introduced.",
+        files: [".env"],
+      },
+      {
+        severity: "info",
+        category: "large-change",
+        title: "Large change detected",
+        description: "A large change was detected.",
+        files: ["src/large.ts"],
+      },
+    ],
+  };
+  const pluralOutput = formatReview(pluralResult, { interactive: false, color: false, width: 88 });
+
+  assert.match(pluralOutput, /6 findings · 2 HIGHS · 2 WARNINGS · 2 INFOS/);
+  assert.match(pluralOutput, /2 HIGHS · 2 WARNINGS · 2 INFOS · Risk HIGH \(9\)/);
+});
+
+test("presentation wraps descriptions and verdict boxes without splitting words on narrow terminals", () => {
+  const description = "A substantial production-source change has no related changed test file. Verify that changed behavior remains covered and existing assertions were not weakened or removed unintentionally.";
+  const result: ReviewResult = {
+    ...sampleReviewResult(),
+    findings: [{
+      severity: "warning",
+      category: "test-attention",
+      title: "Tests may need review",
+      description,
+      files: ["packages/cli/src/run-cli.ts"],
+      evidence: ["Production lines changed: 37", "Related test files changed: 0"],
+    }],
+    risk: { score: 1, level: "low", contributions: [{ points: 1, reason: "Tests may need review" }] },
+    verdict: "REVIEW RECOMMENDED",
+  };
+
+  const output = formatReview(result, { interactive: true, color: false, width: 42 });
+  const boxLines = output.split("\n").filter((line) => line.startsWith("╭") || line.startsWith("│") || line.startsWith("╰"));
+
+  assert.ok(boxLines.every((line) => line.length <= 42));
+  for (const word of description.split(" ")) assert.ok(output.includes(word));
+  assert.match(output, /  A substantial production-source change/);
+  assert.match(output, /    - Production lines changed: 37/);
+});
+
+test("presentation keeps zero-finding reviews concise", () => {
+  const result: ReviewResult = {
+    ...sampleReviewResult(),
+    findings: [],
+    risk: { score: 0, level: "low", contributions: [] },
+    verdict: "LOOKS ROUTINE",
+  };
+
+  const output = formatReview(result, { interactive: false, color: false });
+
+  assert.match(output, /No deterministic review findings\./);
+  assert.match(output, /No findings · Risk LOW \(0\)/);
+  assert.match(output, /Review the diff normally before committing\./);
+  assert.doesNotMatch(output, /Review before commit:/);
+
+  const interactiveOutput = formatReview(result, { interactive: true, color: false });
+  assert.match(interactiveOutput, /✓  LOOKS ROUTINE/);
+});
+test("non-interactive progress emits no transient terminal control sequences", () => {
+  const writes: string[] = [];
+  const progress = createProgress(
+    { isTTY: false, write(message: string): boolean { writes.push(message); return true; } },
+    "Analyzing repository...",
+    { interactive: false, color: false },
+  );
+
+  progress.stop();
+  assert.deepEqual(writes, []);
+});
+
+function sampleReviewResult(): ReviewResult {
+  return {
+    changes: { files: [
+      { type: "modified", path: "src/service.ts" },
+      { type: "created", path: "Migrations/20260819_AddOrderIndex.cs" },
+      { type: "deleted", path: "src/legacy.ts" },
+      { type: "renamed", previousPath: "src/old.ts", path: "src/new.ts" },
+    ] },
+    findings: [
+      {
+        severity: "high",
+        category: "database",
+        title: "Database migration added",
+        description: "A migration-related file was added. Review schema changes.",
+        files: ["Migrations/20260819_AddOrderIndex.cs"],
+      },
+      {
+        severity: "warning",
+        category: "configuration",
+        title: "Configuration changed",
+        description: "A configuration file changed.",
+        files: ["appsettings.json"],
+      },
+    ],
+    risk: { score: 9, level: "high", contributions: [{ points: 5, reason: "Database migration" }] },
+    verdict: "CAREFUL REVIEW RECOMMENDED",
+    checkpoint: { schemaVersion: 1, createdAt: "2026-08-27T00:00:00.000Z", head: "1234567890", branch: "main", tree: "tree" },
+    current: { head: "1234567890", branch: "main", tree: "tree" },
+    headChanged: false,
+    branchChanged: false,
+    content: { async readBefore(): Promise<Buffer | null> { return null; }, async readAfter(): Promise<Buffer | null> { return null; } },
+  };
+}
 
 function agentcheck(cwd: string, args: readonly string[]): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
