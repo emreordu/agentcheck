@@ -54,7 +54,9 @@ export type FindingCategory =
   | "dangerous-file"
   | "large-change"
   | "secret"
-  | "test-attention";
+  | "test-attention"
+  | "semantic-risk"
+  | "sensitive-file";
 
 export interface Finding {
   severity: FindingSeverity;

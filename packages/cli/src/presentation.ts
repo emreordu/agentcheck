@@ -355,6 +355,8 @@ function categoryLabel(category: Finding["category"]): string {
     case "large-change": return "Large changes";
     case "secret": return "Possible secrets";
     case "test-attention": return "Tests may need review";
+    case "semantic-risk": return "Semantic risk changes";
+    case "sensitive-file": return "Sensitive files";
   }
 }
 

@@ -15,6 +15,12 @@ export const RISK_WEIGHTS = {
   ciCdChange: 2,
   largeChange: 2,
   testAttention: 1,
+  accessControlWeakened: 7,
+  securityBehaviorDisabled: 7,
+  anonymousAccessIntroduced: 2,
+  bootstrapChanged: 2,
+  testDisabled: 3,
+  sensitiveFileChanged: 2,
 } as const;
 
 interface RiskRule {
@@ -24,6 +30,12 @@ interface RiskRule {
 }
 
 const RISK_RULES: readonly RiskRule[] = [
+  { reason: "Access control weakened", points: RISK_WEIGHTS.accessControlWeakened, applies: (_, findings) => findings.some((finding) => finding.title === "Access control weakened") },
+  { reason: "Security behavior disabled", points: RISK_WEIGHTS.securityBehaviorDisabled, applies: (_, findings) => findings.some((finding) => finding.title === "Security behavior disabled") },
+  { reason: "Anonymous access introduced", points: RISK_WEIGHTS.anonymousAccessIntroduced, applies: (_, findings) => findings.some((finding) => finding.title === "Anonymous access introduced") },
+  { reason: "Application bootstrap changed", points: RISK_WEIGHTS.bootstrapChanged, applies: (_, findings) => findings.some((finding) => finding.title === "Application bootstrap changed") },
+  { reason: "Tests may have been disabled", points: RISK_WEIGHTS.testDisabled, applies: (_, findings) => findings.some((finding) => finding.title === "Tests may have been disabled") },
+  { reason: "Sensitive file changed", points: RISK_WEIGHTS.sensitiveFileChanged, applies: (_, findings) => hasStandaloneSensitiveFile(findings) },
   {
     reason: "Database migration",
     points: RISK_WEIGHTS.migration,
@@ -75,6 +87,15 @@ const RISK_RULES: readonly RiskRule[] = [
     applies: (_, findings) => findings.some((finding) => finding.category === "test-attention"),
   },
 ];
+
+function hasStandaloneSensitiveFile(findings: readonly Finding[]): boolean {
+  const configurationPaths = new Set(
+    findings.filter((finding) => finding.category === "configuration").flatMap((finding) => finding.files),
+  );
+  return findings
+    .filter((finding) => finding.category === "sensitive-file")
+    .some((finding) => finding.files.some((path) => !configurationPaths.has(path)));
+}
 
 export function assessRisk(changes: ChangeSet, findings: readonly Finding[]): RiskAssessment {
   const contributions = RISK_RULES

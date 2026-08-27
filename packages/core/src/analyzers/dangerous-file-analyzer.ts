@@ -19,7 +19,7 @@ function classify(path: string): DangerousKind | null {
   if (basename === ".gitignore") return "gitignore";
   if (basename === ".gitattributes") return "gitattributes";
   if (normalized.startsWith(".github/") || normalized.includes("/.github/")) return "ci";
-  if (basename === "jenkinsfile" || basename === "azure-pipelines.yml") return "ci";
+  if (basename === "jenkinsfile" || basename === "azure-pipelines.yml" || basename === ".gitlab-ci.yml") return "ci";
   return null;
 }
 

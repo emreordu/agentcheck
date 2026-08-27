@@ -154,6 +154,26 @@ test("TestChangeAnalyzer ignores small, config, migration, and documentation-onl
   assert.deepEqual(findings, []);
 });
 
+test("TestChangeAnalyzer flags new anonymous API surface plus bootstrap wiring without related tests", async () => {
+  const controller = "IKBox.API/Controllers/AgentCheckPublicProbeController.cs";
+  const program = "IKBox.API/Program.cs";
+  const findings = await new TestChangeAnalyzer().analyze(analysis(
+    [changed("created", controller), changed("modified", program)],
+    { [program]: "var app = builder.Build();\n" },
+    {
+      [controller]: "[AllowAnonymous]\npublic class AgentCheckPublicProbeController : ControllerBase {}\n",
+      [program]: "var app = builder.Build();\napp.MapControllers();\n",
+    },
+  ));
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0]?.title, "Tests may need review");
+  assert.deepEqual(findings[0]?.files, [controller, program]);
+  assert.deepEqual(findings[0]?.evidence, [
+    "New public production surface changed",
+    "Application bootstrap runtime wiring changed",
+    "Related test files changed: 0",
+  ]);
+});
 test("TestChangeAnalyzer supports TypeScript, C#, Python, and Go related-test names", async () => {
   const cases = [
     ["src/OrderService.ts", "tests/OrderService.spec.ts"],
@@ -173,6 +193,21 @@ test("TestChangeAnalyzer supports TypeScript, C#, Python, and Go related-test na
   }
 });
 
+test("TestChangeAnalyzer recognizes narrow shared analyzer and CLI suites", async () => {
+  const analyzer = new TestChangeAnalyzer();
+  const cases = [
+    ["packages/core/src/analyzers/migration-analyzer.ts", "packages/core/src/analyzer.test.ts"],
+    ["packages/cli/src/presentation.ts", "packages/cli/src/cli.test.ts"],
+  ] as const;
+  for (const [production, relatedTest] of cases) {
+    const findings = await analyzer.analyze(analysis(
+      [changed("modified", production), changed("modified", relatedTest)],
+      { [production]: lines("before", 20), [relatedTest]: "before\n" },
+      { [production]: lines("after", 20), [relatedTest]: "after\n" },
+    ));
+    assert.deepEqual(findings, [], `${relatedTest} should cover the shared suite for ${production}`);
+  }
+});
 test("TestChangeAnalyzer applies the production-file count threshold at its boundary", async () => {
   const changes = Array.from(
     { length: TEST_ATTENTION_THRESHOLDS.productionFiles },
@@ -231,6 +266,21 @@ test("review semantics keep findings, risk, and verdict consistent", () => {
     score: 4,
     level: "medium",
     contributions: [{ reason: "Production configuration", points: 4 }],
+  });
+  const envConfiguration = { ...productionConfiguration, files: [".env.production"] };
+  const envSensitive = { ...finding("sensitive-file", "Sensitive file changed"), files: [".env.production"] };
+  assert.deepEqual(assessRisk({ files: [] }, [envConfiguration, envSensitive]), {
+    score: 4,
+    level: "medium",
+    contributions: [{ reason: "Production configuration", points: 4 }],
+  });
+  assert.deepEqual(assessRisk(
+    { files: [] },
+    [{ ...finding("sensitive-file", "Sensitive file changed"), files: ["private.key"] }],
+  ), {
+    score: 2,
+    level: "low",
+    contributions: [{ reason: "Sensitive file changed", points: 2 }],
   });
 
   const migration = { ...finding("database", "Database migration added"), severity: "high" as const };

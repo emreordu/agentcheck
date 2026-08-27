@@ -12,6 +12,7 @@ export { DependencyAnalyzer } from "./analyzers/dependency-analyzer.ts";
 export { LARGE_CHANGE_THRESHOLDS, LargeChangeAnalyzer } from "./analyzers/large-change-analyzer.ts";
 export { MigrationAnalyzer } from "./analyzers/migration-analyzer.ts";
 export { SECRET_PATTERNS, SecretAnalyzer } from "./analyzers/secret-analyzer.ts";
+export { SemanticRiskAnalyzer } from "./analyzers/semantic-risk-analyzer.ts";
 export { isTestPath, TEST_ATTENTION_THRESHOLDS, TestChangeAnalyzer } from "./analyzers/test-change-analyzer.ts";
 export { assessRisk, RISK_LEVEL_THRESHOLDS, RISK_WEIGHTS, riskLevelForScore, verdictForRiskLevel } from "./risk.ts";
 export { GitError, resolveRepository } from "./git.ts";

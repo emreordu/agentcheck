@@ -4,6 +4,7 @@ import { DependencyAnalyzer } from "./analyzers/dependency-analyzer.ts";
 import { LargeChangeAnalyzer } from "./analyzers/large-change-analyzer.ts";
 import { MigrationAnalyzer } from "./analyzers/migration-analyzer.ts";
 import { SecretAnalyzer } from "./analyzers/secret-analyzer.ts";
+import { SemanticRiskAnalyzer } from "./analyzers/semantic-risk-analyzer.ts";
 import { TestChangeAnalyzer } from "./analyzers/test-change-analyzer.ts";
 import type { AnalysisContext, Analyzer, FileContentProvider, Finding, FindingSeverity } from "./types.ts";
 
@@ -13,6 +14,7 @@ export const defaultAnalyzers: readonly Analyzer[] = [
   new DangerousFileAnalyzer(),
   new DependencyAnalyzer(),
   new SecretAnalyzer(),
+  new SemanticRiskAnalyzer(),
   new TestChangeAnalyzer(),
   new LargeChangeAnalyzer(),
 ];

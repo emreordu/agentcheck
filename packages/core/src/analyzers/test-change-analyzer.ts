@@ -11,9 +11,15 @@ const SOURCE_EXTENSIONS = new Set([
   ".kt", ".kts", ".php", ".py", ".rb", ".rs", ".swift", ".ts", ".tsx",
 ]);
 
+const ANONYMOUS_ACCESS = /\[\s*AllowAnonymous\s*\]/i;
+const BOOTSTRAP_BASENAME = /^(?:program|startup|main|server|app|index)\.(?:cs|go|py|js|jsx|ts|tsx|dart)$/i;
+const EXECUTABLE_RUNTIME_WIRING = /(?:\b(?:app|router|server)\s*\.|\b(?:use|listen|run|start|map|get|post|put|delete)\s*\()/i;
+
 interface ProductionChange {
   change: FileChange;
   changedLines: number;
+  after: string;
+  introduced: readonly string[];
 }
 
 export class TestChangeAnalyzer implements Analyzer {
@@ -36,12 +42,20 @@ export class TestChangeAnalyzer implements Analyzer {
 
       const lineChanges = compareLines(before, after);
       const changedLines = lineChanges.added + lineChanges.removed;
-      if (changedLines > 0) productionChanges.push({ change, changedLines });
+      if (changedLines > 0) productionChanges.push({
+        change,
+        changedLines,
+        after,
+        introduced: lineChanges.introduced,
+      });
     }
 
     const manyProductionFiles = productionChanges.length >= TEST_ATTENTION_THRESHOLDS.productionFiles;
     const withoutRelatedTests = productionChanges
       .filter(({ change }) => relatedTests(change.path, testPaths).length === 0);
+    const semanticGap = semanticTestReviewGap(productionChanges, testPaths);
+    if (semanticGap !== null) return [toSemanticFinding(semanticGap)];
+
     const findings = withoutRelatedTests
       .filter(({ changedLines }) => changedLines >= TEST_ATTENTION_THRESHOLDS.changedLinesPerFile)
       .map(({ change, changedLines }) => toFileFinding(change, changedLines, productionChanges.length));
@@ -72,6 +86,18 @@ export function isTestPath(path: string): boolean {
   return lower.includes("/__tests__/") || lowerBasename === "test.js";
 }
 
+function semanticTestReviewGap(productionChanges: readonly ProductionChange[], testPaths: readonly string[]): ProductionChange[] | null {
+  const newPublicSurface = productionChanges.find(({ change, after }) =>
+    change.type === "created" && ANONYMOUS_ACCESS.test(after) && relatedTests(change.path, testPaths).length === 0);
+  const bootstrapWiring = productionChanges.find(({ change, introduced }) =>
+    isBootstrapPath(change.path)
+      && introduced.some((line) => !isComment(line) && EXECUTABLE_RUNTIME_WIRING.test(line))
+      && relatedTests(change.path, testPaths).length === 0);
+
+  if (!newPublicSurface || !bootstrapWiring) return null;
+  return [...new Map([newPublicSurface, bootstrapWiring].map((change) => [change.change.path, change])).values()];
+}
+
 function isProductionSourcePath(path: string): boolean {
   if (isTestPath(path) || isMigrationPath(path) || isGeneratedPath(path)) return false;
   const lower = path.replaceAll("\\", "/").toLowerCase();
@@ -95,6 +121,15 @@ function isGeneratedPath(path: string): boolean {
     || /\.(g|generated|designer)\.[^.]+$/.test(normalized);
 }
 
+function isBootstrapPath(path: string): boolean {
+  const basename = path.replaceAll("\\", "/").split("/").at(-1) ?? "";
+  return BOOTSTRAP_BASENAME.test(basename);
+}
+
+function isComment(line: string): boolean {
+  return /^\s*(?:\/\/|#|\/\*|\*)/.test(line);
+}
+
 function testPathCandidates(change: FileChange): string[] {
   const candidates = [change.path, ...(change.previousPath ? [change.previousPath] : [])];
   return candidates.filter(isTestPath);
@@ -102,7 +137,18 @@ function testPathCandidates(change: FileChange): string[] {
 
 function relatedTests(productionPath: string, testPaths: readonly string[]): string[] {
   const productionName = normalizedSubjectName(productionPath);
-  return testPaths.filter((testPath) => normalizedSubjectName(testPath) === productionName);
+  return testPaths.filter((testPath) =>
+    normalizedSubjectName(testPath) === productionName || isSharedSuiteFor(productionPath, testPath));
+}
+
+function isSharedSuiteFor(productionPath: string, testPath: string): boolean {
+  const production = productionPath.replaceAll("\\", "/");
+  const test = testPath.replaceAll("\\", "/");
+  const productionDirectory = production.split("/").slice(0, -1).join("/");
+  const testDirectory = test.split("/").slice(0, -1).join("/");
+  const suite = normalizedSubjectName(test);
+  return (suite === "analyzer" && productionDirectory === `${testDirectory}/analyzers`)
+    || (suite === "cli" && productionDirectory === testDirectory);
 }
 
 function normalizedSubjectName(path: string): string {
@@ -124,6 +170,21 @@ function toFileFinding(change: FileChange, changedLines: number, productionFiles
     evidence: [
       `Production lines changed: ${changedLines}`,
       `Production source files changed: ${productionFiles}`,
+      "Related test files changed: 0",
+    ],
+  };
+}
+
+function toSemanticFinding(changes: readonly ProductionChange[]): Finding {
+  return {
+    severity: "warning",
+    category: "test-attention",
+    title: "Tests may need review",
+    description: "A new public production surface and application bootstrap wiring changed without related changed tests. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.",
+    files: changes.map(({ change }) => change.path).sort((left, right) => left.localeCompare(right, "en")),
+    evidence: [
+      "New public production surface changed",
+      "Application bootstrap runtime wiring changed",
       "Related test files changed: 0",
     ],
   };

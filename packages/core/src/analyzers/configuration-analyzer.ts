@@ -5,6 +5,14 @@ const EXACT_BASENAMES = new Set([
   "application.yml",
   "application.yaml",
   "application.properties",
+  "config.yaml",
+  "config.yml",
+  "settings.py",
+  "androidmanifest.xml",
+  "network_security_config.xml",
+  "info.plist",
+  "pubspec.yaml",
+  "gradle.properties",
   "dockerfile",
   "docker-compose.yml",
   "docker-compose.yaml",
@@ -28,6 +36,9 @@ function isConfigurationPath(path: string): boolean {
   if (EXACT_BASENAMES.has(basename)) return true;
   if (basename.startsWith(".env.")) return true;
   if (/^appsettings.*\.json$/.test(basename)) return true;
+  if (/^environment(?:\.[a-z0-9_-]+)?\.tsx?$/.test(basename)) return true;
+  if (/^(?:next|vite)\.config\.(?:js|ts|mjs|cjs)$/.test(basename)) return true;
+  if (basename.endsWith(".entitlements")) return true;
   if (basename.endsWith(".tf")) return true;
   return normalized.startsWith("terraform/") || normalized.includes("/terraform/");
 }
