@@ -76,6 +76,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "package": "npm run build && vsce package --no-dependencies --out agentcheck-vscode-0.1.3.vsix"
   },
+  "vsce": {
+    "dependencies": false
+  },
   "devDependencies": {
     "@agentcheck/core": "0.1.3",
     "@types/vscode": "^1.95.0",
