@@ -1,6 +1,6 @@
 {
   "name": "@agentcheck/cli",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Deterministic, local-first verification of coding-agent changes before you commit.",
   "license": "Apache-2.0",
   "keywords": [
@@ -25,9 +25,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepack": "npm run build && node ../../scripts/prepare-package-docs.mjs",
+    "prepack": "npm run build && node ../../scripts/prepare-package-docs.mjs && npm run verify:package",
     "test": "npm run build && tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/cli.test.js",
-    "typecheck": "tsc -p tsconfig.test.json --noEmit"
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "verify:package": "node ../../scripts/verify-cli-package.mjs"
   },
   "dependencies": {
     "@agentcheck/core": "0.1.4"
