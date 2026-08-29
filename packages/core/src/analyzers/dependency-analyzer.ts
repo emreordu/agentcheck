@@ -1,6 +1,6 @@
 import { FINDING_IDS } from "../stable-ids.ts";
 import { actionForFinding } from "../finding-actions.ts";
-import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
+import type { AnalysisContext, Analyzer, DependencyDelta, FileChange, Finding } from "../types.ts";
 
 const PACKAGE_JSON_SECTIONS = [
   "dependencies",
@@ -28,6 +28,7 @@ const TIER_TWO_BASENAMES = new Set([
 
 interface DependencyEntry {
   name: string;
+  version?: string;
   source?: string;
 }
 
@@ -63,16 +64,16 @@ async function analyzeSemanticManifest(
     context.files.readAfter(change.path),
   ]);
 
+  // Whole-manifest deletion remains deliberately bounded: file-change reporting already
+  // identifies the deletion, but we do not expand it into one finding per old dependency.
   if (after === null) return [];
 
   try {
     const beforeDependencies = before === null ? [] : parseManifest(kind, before.toString("utf8"));
     const afterDependencies = parseManifest(kind, after.toString("utf8"));
-    const previousNames = new Set(beforeDependencies.map((dependency) => dependency.name.toLowerCase()));
+    const deltas = compareDependencies(beforeDependencies, afterDependencies);
 
-    return afterDependencies
-      .filter((dependency) => !previousNames.has(dependency.name.toLowerCase()))
-      .map((dependency) => dependencyAddedFinding(change.path, dependency));
+    return deltas.map((delta) => dependencyDeltaFinding(change.path, delta, dependencySource(delta, beforeDependencies, afterDependencies)));
   } catch {
     return [unparsedManifestFinding(change)];
   }
@@ -103,8 +104,9 @@ function parsePackageJson(content: string): DependencyEntry[] {
       throw new Error(`${section} must be an object`);
     }
 
-    for (const name of Object.keys(candidate).sort((left, right) => left.localeCompare(right, "en"))) {
-      dependencies.push({ name, source: section });
+    const values = candidate as Record<string, unknown>;
+    for (const name of Object.keys(values).sort((left, right) => left.localeCompare(right, "en"))) {
+      dependencies.push({ name, version: literalVersion(values[name]), source: section });
     }
   }
 
@@ -126,10 +128,13 @@ function parseXmlItems(content: string, elementName: string): DependencyEntry[] 
   for (const match of uncommentedContent.matchAll(elementPattern)) {
     const element = match[0];
     const include = /\bInclude\s*=\s*["']([^"']+)["']/i.exec(element)?.[1];
-    if (include) dependencies.push({ name: include });
+    if (include) dependencies.push({
+      name: include,
+      version: literalVersion(/\bVersion\s*=\s*["']([^"']+)["']/i.exec(element)?.[1]),
+    });
   }
 
-  return uniqueDependencies(dependencies);
+  return dependencies;
 }
 
 function parseRequirements(content: string): DependencyEntry[] {
@@ -141,21 +146,92 @@ function parseRequirements(content: string): DependencyEntry[] {
     if (line.includes("://") || line.toLowerCase().startsWith("git+")) continue;
 
     const withoutComment = line.replace(/\s+#.*$/, "").trim();
-    const name = /^([A-Za-z0-9][A-Za-z0-9._-]*(?:\[[^\]]+\])?)/.exec(withoutComment)?.[1];
-    if (name) dependencies.push({ name: normalizePythonName(name) });
+    const match = /^([A-Za-z0-9][A-Za-z0-9._-]*(?:\[[^\]]+\])?)/.exec(withoutComment);
+    if (!match) continue;
+
+    dependencies.push({
+      name: normalizePythonName(match[1]!),
+      version: literalVersion(withoutComment.slice(match[0].length).trim()),
+    });
   }
 
-  return uniqueDependencies(dependencies);
+  return dependencies;
 }
 
-function uniqueDependencies(dependencies: DependencyEntry[]): DependencyEntry[] {
-  const seen = new Set<string>();
-  return dependencies.filter((dependency) => {
-    const key = dependency.name.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function compareDependencies(
+  beforeDependencies: readonly DependencyEntry[],
+  afterDependencies: readonly DependencyEntry[],
+): DependencyDelta[] {
+  const before = dependencyMap(beforeDependencies);
+  const after = dependencyMap(afterDependencies);
+  const deltas: DependencyDelta[] = [];
+
+  for (const [identity, current] of after) {
+    const previous = before.get(identity);
+    if (!previous) {
+      deltas.push({ kind: "added", name: current.name, ...(current.version ? { currentVersion: current.version } : {}) });
+      continue;
+    }
+    if (previous.version && current.version && previous.version !== current.version) {
+      deltas.push({ kind: "updated", name: current.name, previousVersion: previous.version, currentVersion: current.version });
+    }
+  }
+
+  for (const [identity, previous] of before) {
+    if (!after.has(identity)) {
+      deltas.push({ kind: "removed", name: previous.name, ...(previous.version ? { previousVersion: previous.version } : {}) });
+    }
+  }
+
+  return deltas.sort(compareDependencyDeltas);
+}
+
+function dependencyMap(entries: readonly DependencyEntry[]): Map<string, DependencyEntry> {
+  const dependencies = new Map<string, DependencyEntry>();
+
+  for (const entry of entries) {
+    const identity = entry.name.toLowerCase();
+    const existing = dependencies.get(identity);
+    if (existing && existing.version !== entry.version) {
+      throw new Error("Dependency identity has ambiguous literal versions");
+    }
+    if (!existing) dependencies.set(identity, entry);
+  }
+
+  return dependencies;
+}
+
+function compareDependencyDeltas(left: DependencyDelta, right: DependencyDelta): number {
+  return dependencyDeltaRank(left.kind) - dependencyDeltaRank(right.kind)
+    || left.name.localeCompare(right.name, "en")
+    || (left.previousVersion ?? "").localeCompare(right.previousVersion ?? "", "en")
+    || (left.currentVersion ?? "").localeCompare(right.currentVersion ?? "", "en");
+}
+
+function dependencyDeltaRank(kind: DependencyDelta["kind"]): number {
+  switch (kind) {
+    case "added": return 0;
+    case "removed": return 1;
+    case "updated": return 2;
+  }
+}
+
+function dependencySource(
+  delta: DependencyDelta,
+  beforeDependencies: readonly DependencyEntry[],
+  afterDependencies: readonly DependencyEntry[],
+): string | undefined {
+  const entries = delta.kind === "removed" ? beforeDependencies : afterDependencies;
+  return entries.find((entry) => entry.name.toLowerCase() === delta.name.toLowerCase())?.source;
+}
+
+function literalVersion(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const literal = value.trim();
+  if (!literal || /\s/.test(literal)) return undefined;
+  if (literal.includes("://") || literal.startsWith("@") || literal.includes(" @ ")) return undefined;
+  if (/^(?:git\+|file:|link:|workspace:|npm:|github:|gitlab:|bitbucket:|ssh:)/i.test(literal)) return undefined;
+  return literal;
 }
 
 function normalizePythonName(name: string): string {
@@ -182,21 +258,36 @@ function getBasename(path: string): string {
   return (path.replaceAll("\\", "/").split("/").at(-1) ?? "").toLowerCase();
 }
 
-function dependencyAddedFinding(path: string, dependency: DependencyEntry): Finding {
+function dependencyDeltaFinding(path: string, delta: DependencyDelta, source: string | undefined): Finding {
+  const id = delta.kind === "added"
+    ? FINDING_IDS.dependencyAdded
+    : delta.kind === "removed"
+    ? FINDING_IDS.dependencyRemoved
+    : FINDING_IDS.dependencyUpdated;
+
   return {
-    id: FINDING_IDS.dependencyAdded,
+    id,
     severity: "warning",
     category: "dependency",
-    title: "Dependency added",
-    description: `${dependency.name} was added to this manifest. Review its source, version, license, and compatibility with the project.`,
-    action: actionForFinding(FINDING_IDS.dependencyAdded),
+    title: `Dependency ${delta.kind}`,
+    description: "A dependency literal changed. Review the manifest change in its project context.",
+    action: actionForFinding(id),
     files: [path],
+    dependencyDeltas: [delta],
     evidence: [
-      `Dependency: ${dependency.name}`,
+      formatDependencyDelta(delta),
       `Manifest: ${path}`,
-      ...(dependency.source ? [`Section: ${dependency.source}`] : []),
+      ...(source ? [`Section: ${source}`] : []),
     ],
   };
+}
+
+function formatDependencyDelta(delta: DependencyDelta): string {
+  switch (delta.kind) {
+    case "added": return `Added: ${delta.name}${delta.currentVersion ? ` @ ${delta.currentVersion}` : ""}`;
+    case "removed": return `Removed: ${delta.name}${delta.previousVersion ? ` @ ${delta.previousVersion}` : ""}`;
+    case "updated": return `Updated: ${delta.name} ${delta.previousVersion} → ${delta.currentVersion}`;
+  }
 }
 
 function genericManifestFinding(change: FileChange): Finding {
@@ -221,7 +312,7 @@ function unparsedManifestFinding(change: FileChange): Finding {
     description: "A dependency manifest changed but could not be compared semantically. Inspect the diff for package and version changes.",
     action: actionForFinding(FINDING_IDS.dependencyConfigurationChanged),
     files: [change.path],
-    evidence: ["Semantic comparison was unavailable because the manifest content was invalid."],
+    evidence: ["Semantic comparison was unavailable because the manifest content was invalid or ambiguous."],
   };
 }
 

@@ -89,14 +89,14 @@ test("DangerousFileAnalyzer reports Git and CI control changes and important del
   ]);
 });
 
-test("DependencyAnalyzer finds package.json additions but not removals or version changes", async () => {
+test("DependencyAnalyzer reports deterministic package.json add, remove, and update deltas", async () => {
   const before = JSON.stringify({
-    dependencies: { existing: "1.0.0", removed: "1.0.0" },
+    dependencies: { existing: "^1.0.0", removed: "~4.5.6" },
     devDependencies: { oldDev: "1.0.0" },
   });
   const after = JSON.stringify({
-    dependencies: { existing: "2.0.0", added: "1.0.0" },
-    devDependencies: { oldDev: "1.0.0", newDev: "1.0.0" },
+    dependencies: { existing: "^2.0.0", added: "^1.2.3" },
+    devDependencies: { oldDev: "1.0.0", newDev: "*" },
   }, null, 2);
 
   const findings = await new DependencyAnalyzer().analyze(context(
@@ -105,80 +105,122 @@ test("DependencyAnalyzer finds package.json additions but not removals or versio
     { "package.json": after },
   ));
 
-  assert.deepEqual(findings.map((finding) => finding.evidence?.[0]), [
-    "Dependency: added",
-    "Dependency: newDev",
+  assert.deepEqual(findings.map((finding) => finding.dependencyDeltas?.[0]), [
+    { kind: "added", name: "added", currentVersion: "^1.2.3" },
+    { kind: "added", name: "newDev", currentVersion: "*" },
+    { kind: "removed", name: "removed", previousVersion: "~4.5.6" },
+    { kind: "updated", name: "existing", previousVersion: "^1.0.0", currentVersion: "^2.0.0" },
   ]);
-  assert.ok(findings.every(({ title }) => title === "Dependency added"));
+  assert.deepEqual(findings.map((finding) => finding.id), [
+    "dependency.added",
+    "dependency.added",
+    "dependency.removed",
+    "dependency.updated",
+  ]);
+  assert.deepEqual(findings.map((finding) => finding.evidence?.[0]), [
+    "Added: added @ ^1.2.3",
+    "Added: newDev @ *",
+    "Removed: removed @ ~4.5.6",
+    "Updated: existing ^1.0.0 → ^2.0.0",
+  ]);
 
+  assert.deepEqual(assessRisk({ files: [changed("modified", "package.json")] }, findings), {
+    score: 3,
+    level: "medium",
+    contributions: [{ id: "dependency.added", reason: "Dependency addition", points: 3 }],
+  });
   const formattingOnly = await new DependencyAnalyzer().analyze(context(
     [changed("modified", "package.json")],
     { "package.json": "{\"dependencies\":{\"same\":\"1\"}}" },
-    { "package.json": "{\n  \"dependencies\": { \"same\": \"2\" }\n}\n" },
+    { "package.json": "{\n  \"dependencies\": { \"same\": \"1\" }\n}\n" },
   ));
   assert.deepEqual(formattingOnly, []);
+
+  const sectionMove = await new DependencyAnalyzer().analyze(context(
+    [changed("modified", "package.json")],
+    { "package.json": "{\"devDependencies\":{\"same\":\"1\"}}" },
+    { "package.json": "{\"dependencies\":{\"same\":\"1\"}}" },
+  ));
+  assert.deepEqual(sectionMove, []);
 });
 
-test("DependencyAnalyzer handles invalid package.json without failing the review", async () => {
-  const findings = await new DependencyAnalyzer().analyze(context(
+test("DependencyAnalyzer handles invalid and ambiguous manifests conservatively", async () => {
+  const invalid = await new DependencyAnalyzer().analyze(context(
     [changed("modified", "package.json")],
     { "package.json": "{\"dependencies\":{}}" },
     { "package.json": "{ invalid" },
   ));
+  assert.equal(invalid.length, 1);
+  assert.equal(invalid[0]?.title, "Dependency configuration changed");
+  assert.match(invalid[0]?.description ?? "", /could not be compared semantically/);
 
-  assert.equal(findings.length, 1);
-  assert.equal(findings[0]?.title, "Dependency configuration changed");
-  assert.match(findings[0]?.description ?? "", /could not be compared semantically/);
+  const ambiguous = await new DependencyAnalyzer().analyze(context(
+    [changed("modified", "package.json")],
+    { "package.json": "{\"dependencies\":{}}" },
+    { "package.json": "{\"dependencies\":{\"same\":\"1\"},\"devDependencies\":{\"same\":\"2\"}}" },
+  ));
+  assert.equal(ambiguous.length, 1);
+  assert.match(ambiguous[0]?.evidence?.[0] ?? "", /invalid or ambiguous/);
+
+  const indirect = await new DependencyAnalyzer().analyze(context(
+    [changed("modified", "package.json")],
+    { "package.json": "{\"dependencies\":{}}" },
+    { "package.json": "{\"dependencies\":{\"private\":\"https://token@example.test/package.tgz\"}}" },
+  ));
+  assert.deepEqual(indirect[0]?.dependencyDeltas, [{ kind: "added", name: "private" }]);
+  assert.ok(!JSON.stringify(indirect).includes("token@example.test"));
 });
 
-test("DependencyAnalyzer compares csproj and Directory.Packages.props Include items", async () => {
+test("DependencyAnalyzer reports .NET PackageReference and central-package literal deltas", async () => {
   const analyzer = new DependencyAnalyzer();
   const csproj = await analyzer.analyze(context(
     [changed("modified", "src/App.csproj")],
-    { "src/App.csproj": "<Project><ItemGroup><PackageReference Include=\"Existing\" Version=\"1\" /></ItemGroup></Project>" },
-    { "src/App.csproj": "<Project><ItemGroup><!-- <PackageReference Include=\"Commented\" /> --><PackageReference Version=\"1\" Include=\"Existing\" /><PackageReference Include=\"Polly\" Version=\"8\" /></ItemGroup></Project>" },
+    { "src/App.csproj": "<Project><ItemGroup><PackageReference Include=\"Existing\" Version=\"1\" /><PackageReference Include=\"Removed\" Version=\"[1.0,2.0)\" /></ItemGroup></Project>" },
+    { "src/App.csproj": "<Project><ItemGroup><!-- <PackageReference Include=\"Commented\" Version=\"9\" /> --><PackageReference Version=\"2\" Include=\"Existing\" /><PackageReference Include=\"Polly\" Version=\"8\" /></ItemGroup></Project>" },
   ));
-  assert.deepEqual(csproj.map((finding) => finding.evidence?.[0]), ["Dependency: Polly"]);
-
-  const unchanged = await analyzer.analyze(context(
-    [changed("modified", "src/App.csproj")],
-    { "src/App.csproj": "<PackageReference Include='Same' Version='1'/>" },
-    { "src/App.csproj": "\n<PackageReference Version='2' Include='Same' />\n" },
-  ));
-  assert.deepEqual(unchanged, []);
-
-  const removed = await analyzer.analyze(context(
-    [changed("modified", "src/App.csproj")],
-    { "src/App.csproj": "<Project><PackageReference Include='Same'/><PackageReference Include='Removed'/></Project>" },
-    { "src/App.csproj": "<Project><PackageReference Include='Same'/></Project>" },
-  ));
-  assert.deepEqual(removed, []);
+  assert.deepEqual(csproj.map((finding) => finding.dependencyDeltas?.[0]), [
+    { kind: "added", name: "Polly", currentVersion: "8" },
+    { kind: "removed", name: "Removed", previousVersion: "[1.0,2.0)" },
+    { kind: "updated", name: "Existing", previousVersion: "1", currentVersion: "2" },
+  ]);
 
   const central = await analyzer.analyze(context(
     [changed("modified", "Directory.Packages.props")],
-    { "Directory.Packages.props": "<Project />" },
-    { "Directory.Packages.props": "<Project><PackageVersion Include=\"Serilog\" Version=\"4\" /></Project>" },
+    { "Directory.Packages.props": "<Project><ItemGroup><PackageVersion Include=\"Serilog\" Version=\"3\" /></ItemGroup></Project>" },
+    { "Directory.Packages.props": "<Project><ItemGroup><PackageVersion Include=\"serilog\" Version=\"4\" /></ItemGroup></Project>" },
   ));
-  assert.equal(central[0]?.evidence?.[0], "Dependency: Serilog");
+  assert.deepEqual(central[0]?.dependencyDeltas, [{ kind: "updated", name: "serilog", previousVersion: "3", currentVersion: "4" }]);
 });
 
-test("DependencyAnalyzer compares requirements by normalized package identity", async () => {
+test("DependencyAnalyzer reports requirements changes by normalized identity and literal specifier", async () => {
   const analyzer = new DependencyAnalyzer();
   const findings = await analyzer.analyze(context(
     [changed("modified", "requirements.txt")],
-    { "requirements.txt": "requests==2.31\nFlask_Cors==4\n" },
-    { "requirements.txt": "# updated\nrequests==2.32\n\nflask-cors==5\nhttpx>=0.27 # new\n" },
+    { "requirements.txt": "requests==2.31\nFlask_Cors==4\nremoved~=1.2\n" },
+    { "requirements.txt": "# updated\nrequests>=2.32\n\nflask-cors==5\nhttpx>=0.27 # new\n" },
   ));
-  assert.deepEqual(findings.map((finding) => finding.evidence?.[0]), ["Dependency: httpx"]);
+  assert.deepEqual(findings.map((finding) => finding.dependencyDeltas?.[0]), [
+    { kind: "added", name: "httpx", currentVersion: ">=0.27" },
+    { kind: "removed", name: "removed", previousVersion: "~=1.2" },
+    { kind: "updated", name: "flask-cors", previousVersion: "==4", currentVersion: "==5" },
+    { kind: "updated", name: "requests", previousVersion: "==2.31", currentVersion: ">=2.32" },
+  ]);
 
   const commentsOnly = await analyzer.analyze(context(
     [changed("modified", "requirements.txt")],
     { "requirements.txt": "requests==1\n" },
-    { "requirements.txt": "# comment\n\nrequests==2\n" },
+    { "requirements.txt": "# comment\n\nrequests==1\n" },
   ));
   assert.deepEqual(commentsOnly, []);
 });
 
+test("DependencyAnalyzer keeps whole semantic-manifest deletion bounded", async () => {
+  const findings = await new DependencyAnalyzer().analyze(context(
+    [changed("deleted", "package.json")],
+    { "package.json": "{\"dependencies\":{\"removed\":\"1\"}}" },
+  ));
+  assert.deepEqual(findings, []);
+});
 test("DependencyAnalyzer classifies representative generic manifests across ecosystems", async () => {
   const paths = [
     "package-lock.json",

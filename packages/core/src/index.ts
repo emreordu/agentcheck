@@ -24,6 +24,8 @@ export type {
   Checkpoint,
   AnalysisContext,
   Analyzer,
+  DependencyDelta,
+  DependencyDeltaKind,
   FileChange,
   FileChangeType,
   FileContentProvider,

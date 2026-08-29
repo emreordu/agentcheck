@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { actionForFinding, assessRisk, BUILT_IN_FINDING_ACTIONS, BUILT_IN_FINDING_IDS, BUILT_IN_RISK_CONTRIBUTION_IDS, FINDING_IDS, REVIEW_REPORT_SCHEMA_VERSION, toReviewReport, type Finding, type ReviewResult } from "./index.ts";
 
-const finding: Finding = { id: FINDING_IDS.accessControlWeakened, severity: "high", category: "semantic-risk", title: "Presentation title", description: "Presentation description", action: "Presentation action", files: ["src/ü space.ts"], evidence: ["safe"] };
+const finding: Finding = { id: FINDING_IDS.accessControlWeakened, severity: "high", category: "semantic-risk", title: "Presentation title", description: "Presentation description", action: "Presentation action", files: ["src/ü space.ts"], evidence: ["safe"], dependencyDeltas: [{ kind: "updated", name: "library", previousVersion: "^1.0.0", currentVersion: "^1.1.0" }] };
 const result: ReviewResult = { changes: { files: [{ type: "renamed", previousPath: "old name.ts", path: "src/ü space.ts" }, { type: "deleted", path: "deleted file.ts" }] }, findings: [finding], risk: assessRisk({ files: [] }, [finding]), verdict: "CAREFUL REVIEW RECOMMENDED", checkpoint: { schemaVersion: 1, createdAt: "volatile", head: "before", branch: "main", tree: "tree-before" }, current: { head: "after", branch: "feature", tree: "tree-after" }, headChanged: true, branchChanged: true, content: { async readBefore() { return Buffer.from("secret-value"); }, async readAfter() { return null; } } };
 
 test("stable ID registries are complete, unique, and conventionally named", () => {
@@ -42,4 +42,5 @@ test("ReviewReport is data-only, round-trippable, and omits volatile checkpoint 
   assert.equal(report.context.checkpoint.head, "before");
   assert.equal(report.context.current.branch, "feature");
   assert.equal(report.findings[0]?.action, "Presentation action");
+  assert.deepEqual(report.findings[0]?.dependencyDeltas, [{ kind: "updated", name: "library", previousVersion: "^1.0.0", currentVersion: "^1.1.0" }]);
 });

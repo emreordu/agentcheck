@@ -9,6 +9,8 @@ export const FINDING_IDS = {
   ciCdConfigurationChanged: "delivery.ci-cd-configuration-changed",
   ciCdFileDeleted: "delivery.ci-cd-file-deleted",
   dependencyAdded: "dependency.added",
+  dependencyRemoved: "dependency.removed",
+  dependencyUpdated: "dependency.updated",
   dependencyConfigurationChanged: "dependency.configuration-changed",
   largeChangeSet: "review.large-change-set",
   largeFileAdded: "review.large-file-added",

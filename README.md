@@ -87,7 +87,7 @@ Messages use neutral language such as “may change” when AgentCheck cannot de
 
 ## What it checks
 
-The v0.1 analyzers flag migration-related files; recognized configuration files; Git ignore, Git attributes, and selected CI/CD files; dependency additions in supported manifests and changes to selected other dependency manifests; unusually large change sets or added files; newly introduced high-confidence secret indicators; and substantial production-source changes without related changed tests. Findings are evidence-based; they do not claim that a migration will run, a secret is valid, or test coverage is absent.
+The v0.1 analyzers flag migration-related files; recognized configuration files; Git ignore, Git attributes, and selected CI/CD files; literal dependency additions, removals, and updates in supported manifests plus generic changes to selected other dependency manifests; unusually large change sets or added files; newly introduced high-confidence secret indicators; and substantial production-source changes without related changed tests. Findings are evidence-based; they do not claim that a migration will run, a dependency is safe, a secret is valid, or test coverage is absent.
 
 ## VS Code
 

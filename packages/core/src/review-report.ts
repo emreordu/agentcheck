@@ -18,7 +18,12 @@ export function toReviewReport(result: ReviewResult): ReviewReport {
     schemaVersion: REVIEW_REPORT_SCHEMA_VERSION,
     context: { checkpoint: { head: result.checkpoint.head, branch: result.checkpoint.branch }, current: { head: result.current.head, branch: result.current.branch }, headChanged: result.headChanged, branchChanged: result.branchChanged },
     changes: { files: result.changes.files.map((file) => ({ ...file })) },
-    findings: result.findings.map((finding) => ({ ...finding, files: [...finding.files], ...(finding.evidence ? { evidence: [...finding.evidence] } : {}) })),
+    findings: result.findings.map((finding) => ({
+      ...finding,
+      files: [...finding.files],
+      ...(finding.evidence ? { evidence: [...finding.evidence] } : {}),
+      ...(finding.dependencyDeltas ? { dependencyDeltas: finding.dependencyDeltas.map((delta) => ({ ...delta })) } : {}),
+    })),
     risk: { ...result.risk, contributions: result.risk.contributions.map((contribution) => ({ ...contribution })) },
     verdict: result.verdict,
   };

@@ -69,6 +69,18 @@ export interface Finding {
   action: string;
   files: string[];
   evidence?: string[];
+  /** Literal, parser-confirmed dependency changes for dependency findings. */
+  dependencyDeltas?: DependencyDelta[];
+}
+
+export type DependencyDeltaKind = "added" | "removed" | "updated";
+
+/** Portable literal dependency evidence; it makes no compatibility or security claim. */
+export interface DependencyDelta {
+  kind: DependencyDeltaKind;
+  name: string;
+  previousVersion?: string;
+  currentVersion?: string;
 }
 
 export interface AnalysisContext {

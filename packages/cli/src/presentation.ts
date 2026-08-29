@@ -295,12 +295,12 @@ function formatVerdictBox(lines: readonly string[], verdict: Verdict, options: P
 
 function formatChangeCounts(counts: Record<FileChange["type"], number>, options: PresentationOptions): string {
   const separator = subtle(" • ", options);
-  return [
+  return wrap([
     bold(String(counts.modified), options) + " modified",
     bold(String(counts.created), options) + " created",
     bold(String(counts.deleted), options) + " deleted",
     bold(String(counts.renamed), options) + " renamed",
-  ].join(separator);
+  ].join(separator), reportWidth(options)).join("\n");
 }
 
 function formatDuration(durationMs: number | undefined): string {

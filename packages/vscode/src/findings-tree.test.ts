@@ -55,6 +55,24 @@ test("represents finding files, why it matters, and evidence by severity", () =>
   assert.doesNotMatch(JSON.stringify(buildReviewTree(result)), /FakeCredential/);
 });
 
+test("exposes Core dependency delta data and evidence without extension-side parsing", () => {
+  const result = review({
+    findings: [{
+      ...finding("warning", "Dependency updated", ["package.json"]),
+      dependencyDeltas: [{ kind: "updated", name: "library", previousVersion: "^1.0.0", currentVersion: "^1.1.0" }],
+      evidence: ["Updated: library ^1.0.0 → ^1.1.0"],
+    }],
+  });
+
+  const findingsSection = buildReviewTree(result)[1]!;
+  const severity = childrenOf(findingsSection)[0]!;
+  const findingNode = childrenOf(severity)[0]!;
+  assert.equal(findingNode.kind, "finding");
+  assert.deepEqual(findingNode.finding.dependencyDeltas, [{ kind: "updated", name: "library", previousVersion: "^1.0.0", currentVersion: "^1.1.0" }]);
+  const evidence = childrenOf(findingNode).find((node) => node.kind === "evidence-group");
+  assert.ok(evidence && evidence.kind === "evidence-group");
+  assert.deepEqual(childrenOf(evidence), [{ kind: "evidence", value: "Updated: library ^1.0.0 → ^1.1.0" }]);
+});
 test("represents risk score, risk level, verdict, and review status", () => {
   const result = review({ risk: { score: 42, level: "medium", contributions: [] }, verdict: "REVIEW RECOMMENDED" });
   const roots = buildReviewTree(result);

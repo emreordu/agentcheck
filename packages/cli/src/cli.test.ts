@@ -108,6 +108,42 @@ test("JSON check emits one portable Core review report without human output", as
   }
 });
 
+test("CLI presents and serializes machine-readable literal dependency deltas", async () => {
+  const repository = await createRepository({
+    "package.json": "{\"dependencies\":{\"updated\":\"^1.0.0\",\"removed\":\"4.5.6\"}}\n",
+  });
+  try {
+    await agentcheck(repository.path, ["start"]);
+    await write(repository.path, "package.json", "{\"dependencies\":{\"updated\":\"^1.1.0\",\"added\":\"~2.0.0\"}}\n");
+
+    const json = await agentcheck(repository.path, ["check", "--format", "json"]);
+    const report = JSON.parse(json.stdout) as {
+      findings: { id?: string; dependencyDeltas?: { kind: string; name: string; previousVersion?: string; currentVersion?: string }[] }[];
+    };
+    assert.equal(json.exitCode, 0);
+    assert.equal(json.stderr, "");
+    assert.deepEqual(report.findings.map((finding) => ({ id: finding.id, dependencyDeltas: finding.dependencyDeltas })), [
+      { id: "dependency.added", dependencyDeltas: [{ kind: "added", name: "added", currentVersion: "~2.0.0" }] },
+      { id: "dependency.removed", dependencyDeltas: [{ kind: "removed", name: "removed", previousVersion: "4.5.6" }] },
+      { id: "dependency.updated", dependencyDeltas: [{ kind: "updated", name: "updated", previousVersion: "^1.0.0", currentVersion: "^1.1.0" }] },
+    ]);
+    assert.equal(json.stdout, JSON.stringify(report, null, 2) + "\n");
+
+    const human = await agentcheck(repository.path, []);
+    assert.equal(human.exitCode, 0);
+    assert.equal(human.stderr, "");
+    assert.match(human.stdout, /Added: added @ ~2\.0\.0/);
+    assert.match(human.stdout, /Removed: removed @ 4\.5\.6/);
+    assert.match(human.stdout, /Updated: updated \^1\.0\.0 → \^1\.1\.0/);
+    assert.doesNotMatch(human.stdout, /\u001B\[/);
+
+    const narrow = formatReview(dependencyDeltaReview(), { interactive: true, color: false, width: 42 });
+    assert.doesNotMatch(narrow, /\u001B\[/);
+    assert.ok(narrow.split("\n").every((line) => line.length <= 42));
+  } finally {
+    await repository.cleanup();
+  }
+});
 test("JSON syntax errors are explicit and never fall back to human review output", async () => {
   const repository = await createRepository({ "A.ts": "one\n" });
   try {
@@ -339,7 +375,7 @@ test("reports deterministic M3 findings while preserving the real Git index", as
     assert.match(result.stdout, /▲  HIGH  Database migration added/);
     assert.match(result.stdout, /◆  WARNING  Production configuration changed/);
     assert.match(result.stdout, /◆  WARNING  Dependency added/);
-    assert.match(result.stdout, /Dependency: polly/);
+    assert.match(result.stdout, /Added: polly @ 1\.0\.0/);
     assert.match(result.stdout, /3 findings · 1 HIGH · 2 WARNING/);
     assert.match(result.stdout, /Score: 12 — HIGH/);
     assert.match(result.stdout, /CAREFUL REVIEW RECOMMENDED/);
@@ -707,6 +743,29 @@ function sampleReviewResult(): ReviewResult {
   };
 }
 
+function dependencyDeltaReview(): ReviewResult {
+  return {
+    changes: { files: [{ type: "modified", path: "package.json" }] },
+    findings: [{
+      id: FINDING_IDS.dependencyUpdated,
+      severity: "warning",
+      category: "dependency",
+      title: "Dependency updated",
+      description: "A dependency literal changed.",
+      action: actionForFinding(FINDING_IDS.dependencyUpdated),
+      files: ["package.json"],
+      dependencyDeltas: [{ kind: "updated", name: "updated", previousVersion: "^1.0.0", currentVersion: "^1.1.0" }],
+      evidence: ["Updated: updated ^1.0.0 → ^1.1.0"],
+    }],
+    risk: { score: 0, level: "low", contributions: [] },
+    verdict: "REVIEW RECOMMENDED",
+    checkpoint: { schemaVersion: 1, createdAt: "test", head: "before", branch: "main", tree: "before" },
+    current: { head: "before", branch: "main", tree: "after" },
+    headChanged: false,
+    branchChanged: false,
+    content: { async readBefore() { return null; }, async readAfter() { return null; } },
+  };
+}
 function agentcheck(cwd: string, args: readonly string[]): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
     execFile(process.execPath, [cliEntry, ...args], { cwd, encoding: "utf8" }, (error, stdout, stderr) => {
