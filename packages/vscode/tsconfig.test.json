@@ -6,6 +6,7 @@
   },
   "include": [
     "src/findings-tree.ts",
+    "src/checkpoint-diff-model.ts",
     "src/**/*.test.ts"
   ],
   "exclude": []

@@ -93,7 +93,7 @@ The v0.1 analyzers flag migration-related files; recognized configuration files;
 
 Install AgentCheck directly from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=agentcheck.agentcheck-vscode). The extension ID is `agentcheck.agentcheck-vscode`.
 
-The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Findings, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with rationale, review actions, and evidence, risk, and verdict; file items open workspace files. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
+The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Findings, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with rationale, review actions, evidence, risk, and verdict. Selecting a changed or flagged file opens VS Code's native diff between the AgentCheck checkpoint and the exact current snapshot used for the review; the checkpoint may include pre-existing dirty state and is not Git `HEAD`. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
 
 ## Core library
 

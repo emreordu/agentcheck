@@ -15,14 +15,14 @@ Install it from the [Visual Studio Marketplace](https://marketplace.visualstudio
    - **FINDINGS** — deterministic attention signals with redacted evidence.
    - **RISK** — a transparent score and level.
    - **VERDICT** — a restrained review recommendation.
-4. Open changed or flagged files directly from the Review view, then run **AgentCheck: Clear Checkpoint** when finished.
+4. Select a changed or flagged file to open VS Code's native **Checkpoint ↔ Current** diff, then run **AgentCheck: Clear Checkpoint** when finished.`n`nThe left side is the AgentCheck checkpoint and the right side is the exact current snapshot used for that review. The checkpoint can include pre-existing staged or unstaged work, so it is not necessarily Git `HEAD`. Refresh the review before opening a diff if the file has changed again.
 
 ## Commands
 
 - **AgentCheck: Create Checkpoint**
 - **AgentCheck: Review Changes**
 - **AgentCheck: Show Findings**
-- **AgentCheck: Clear Checkpoint**
+- **AgentCheck: Clear Checkpoint**`n- **AgentCheck: Open Checkpoint Diff**
 
 ## CLI relationship and local operation
 

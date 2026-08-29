@@ -26,6 +26,7 @@
     "onCommand:agentcheck.reviewChanges",
     "onCommand:agentcheck.showFindings",
     "onCommand:agentcheck.clearCheckpoint",
+    "onCommand:agentcheck.openCheckpointDiff",
     "onView:agentcheck.findings"
   ],
   "main": "./dist/extension.cjs",
@@ -50,6 +51,11 @@
         "command": "agentcheck.clearCheckpoint",
         "title": "Clear Checkpoint",
         "category": "AgentCheck"
+      },
+      {
+        "command": "agentcheck.openCheckpointDiff",
+        "title": "Open Checkpoint Diff",
+        "category": "AgentCheck"
       }
     ],
     "viewsContainers": {
@@ -68,11 +74,21 @@
           "name": "Review"
         }
       ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "agentcheck.openCheckpointDiff",
+          "when": "view == agentcheck.findings && (viewItem == agentcheck-change || viewItem == agentcheck-finding-file)",
+          "group": "navigation"
+        }
+      ]
     }
   },
   "scripts": {
     "build": "node esbuild.mjs",
-    "test": "tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/findings-tree.test.js",
+    "test": "tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/findings-tree.test.js .test-dist/checkpoint-diff-model.test.js",
+    "test:host": "npm run build && node scripts/run-extension-host-test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "package": "npm run build && vsce package --no-dependencies --out agentcheck-vscode-0.1.4.vsix"
   },
