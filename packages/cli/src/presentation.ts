@@ -217,6 +217,7 @@ export function formatHelp(): string {
     "  agentcheck          Review changes since checkpoint",
     "  agentcheck check    Review changes since checkpoint",
     "  agentcheck clear    Clear the active checkpoint",
+    "  agentcheck check --format json    Emit the review report as JSON",
     "",
     "Options:",
     "  -h, --help",
@@ -325,7 +326,8 @@ function severitySummaryParts(findings: readonly Finding[], pluralize: boolean):
 function reviewTopics(result: ReviewResult): string[] {
   const topics = new Map<string, string>();
   for (const contribution of result.risk.contributions) {
-    topics.set(riskTopicKey(contribution.id), contribution.reason);
+    const key = riskTopicKey(contribution.id);
+    topics.set(key, key === "dependency" ? categoryLabel("dependency") : contribution.reason);
   }
   for (const finding of result.findings) {
     if (!topics.has(finding.category)) topics.set(finding.category, categoryLabel(finding.category));

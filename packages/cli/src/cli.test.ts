@@ -91,8 +91,120 @@ test("no changes is a successful result", async () => {
   }
 });
 
-test("check without a checkpoint returns a concise user-facing error", async () => {
+test("JSON check emits one portable Core review report without human output", async () => {
+  const repository = await createRepository({ "src/value.ts": "one\n" });
+  try {
+    await agentcheck(repository.path, ["start"]);
+    const result = await agentcheck(repository.path, ["check", "--format", "json"]);
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    const report = JSON.parse(result.stdout) as { schemaVersion: number; changes: { files: unknown[] }; risk: { level: string } };
+    assert.equal(report.schemaVersion, 1);
+    assert.deepEqual(report.changes.files, []);
+    assert.equal(result.stdout, JSON.stringify(report, null, 2) + "\n");
+    assert.doesNotMatch(result.stdout, /AgentCheck|Analyzing repository|createdAt|tree|readAfter|Buffer/);
+  } finally {
+    await repository.cleanup();
+  }
+});
+
+test("JSON syntax errors are explicit and never fall back to human review output", async () => {
   const repository = await createRepository({ "A.ts": "one\n" });
+  try {
+    const invalid = await agentcheck(repository.path, ["check", "--format", "xml"]);
+    assert.equal(invalid.exitCode, 1);
+    assert.equal(invalid.stdout, "");
+    assert.match(invalid.stderr, /Unknown command: check --format xml/);
+    const missing = await agentcheck(repository.path, ["check", "--format"]);
+    assert.equal(missing.exitCode, 1);
+    assert.equal(missing.stdout, "");
+    assert.match(missing.stderr, /Unknown command: check --format/);
+    const extra = await agentcheck(repository.path, ["check", "--format", "json", "extra"]);
+    assert.equal(extra.exitCode, 1);
+    assert.equal(extra.stdout, "");
+    assert.match(extra.stderr, /Unknown command: check --format json extra/);
+  } finally {
+    await repository.cleanup();
+  }
+});
+test("JSON review preserves high-risk IDs and redacts source secrets", async () => {
+  const fakeCredential = "M2-FakeCredential-987!";
+  const repository = await createRepository({
+    "src/OrderService.ts": lines("before", 25),
+    "appsettings.Production.json": "{\"Mode\":\"safe\"}\n",
+    "package.json": "{\"dependencies\":{\"existing\":\"1.0.0\"}}\n",
+  });
+  try {
+    await agentcheck(repository.path, ["start"]);
+    await write(repository.path, "src/OrderService.ts", lines("after", 25));
+    await write(repository.path, "appsettings.Production.json", `{\n  "Password": "${fakeCredential}"\n}\n`);
+    await write(repository.path, "package.json", "{\"dependencies\":{\"existing\":\"1.0.0\",\"polly\":\"1.0.0\"}}\n");
+    await write(repository.path, "Migrations/20260829_AddOrderIndex.cs", "// migration\n");
+
+    const result = await agentcheck(repository.path, ["check", "--format", "json"]);
+    const report = JSON.parse(result.stdout) as { findings: { id?: string }[]; risk: { level: string; contributions: { id?: string }[] }; verdict: string };
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.equal(report.risk.level, "high");
+    assert.equal(report.verdict, "CAREFUL REVIEW RECOMMENDED");
+    assert.deepEqual(report.findings.map((finding) => finding.id), ["database.migration-changed", "security.possible-secret", "configuration.production-changed", "dependency.added", "testing.coverage-review-needed"]);
+    assert.deepEqual(report.risk.contributions.map((contribution) => contribution.id), ["database.migration", "security.possible-secret", "configuration.production-changed", "dependency.added", "testing.coverage-review-needed"]);
+    assert.doesNotMatch(result.stdout, new RegExp(fakeCredential));
+    assert.doesNotMatch(result.stdout, /AGENTCHECK|CHANGES|FINDINGS|RISK|VERDICT|Baseline loaded|Analysis complete/);
+  } finally {
+    await repository.cleanup();
+  }
+});
+
+test("JSON review preserves rename, Unicode, and spaces in repository-relative paths", async () => {
+  const repository = await createRepository({ "old name.ts": "same\n", "src/ü space.ts": "before\n" });
+  try {
+    await agentcheck(repository.path, ["start"]);
+    await rm(join(repository.path, "old name.ts"));
+    await write(repository.path, "new name.ts", "same\n");
+    await write(repository.path, "src/ü space.ts", "after\n");
+
+    const result = await agentcheck(repository.path, ["check", "--format", "json"]);
+    const report = JSON.parse(result.stdout) as { changes: { files: { type: string; path: string; previousPath?: string }[] } };
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.ok(report.changes.files.some((file) => file.type === "renamed" && file.previousPath === "old name.ts" && file.path === "new name.ts"));
+    assert.ok(report.changes.files.some((file) => file.type === "modified" && file.path === "src/ü space.ts"));
+    assert.doesNotMatch(result.stdout, new RegExp(repository.path.replaceAll("\\", "\\\\")));
+    assert.doesNotMatch(result.stdout, /before\\n|after\\n/);
+  } finally {
+    await repository.cleanup();
+  }
+});
+
+test("JSON review reports portable context and keeps operational failures off stdout", async () => {
+  const repository = await createRepository({ "base.ts": "base\n" });
+  try {
+    await agentcheck(repository.path, ["start"]);
+    const checkpointHead = await gitText(repository.path, ["rev-parse", "HEAD"]);
+    await git(repository.path, ["switch", "-c", "feature/json-context", "--quiet"]);
+    await write(repository.path, "branch.ts", "branch\n");
+    await git(repository.path, ["add", "--", "branch.ts"]);
+    await git(repository.path, ["commit", "-m", "branch", "--quiet"]);
+    const currentHead = await gitText(repository.path, ["rev-parse", "HEAD"]);
+
+    const result = await agentcheck(repository.path, ["check", "--format", "json"]);
+    const report = JSON.parse(result.stdout) as { context: { checkpoint: { head: string; branch: string | null }; current: { head: string; branch: string | null }; headChanged: boolean; branchChanged: boolean } };
+    assert.equal(result.exitCode, 0);
+    assert.deepEqual(report.context, { checkpoint: { head: checkpointHead, branch: "main" }, current: { head: currentHead, branch: "feature/json-context" }, headChanged: true, branchChanged: true });
+    assert.doesNotMatch(result.stdout, /createdAt|tree/);
+
+    await agentcheck(repository.path, ["clear"]);
+    const failure = await agentcheck(repository.path, ["check", "--format", "json"]);
+    assert.notEqual(failure.exitCode, 0);
+    assert.equal(failure.stdout, "");
+    assert.match(failure.stderr, /No active AgentCheck checkpoint/);
+  } finally {
+    await repository.cleanup();
+  }
+});
+  const repository = await createRepository({ "A.ts": "one\n" });
+test("check without a checkpoint returns a concise user-facing error", async () => {
   try {
     const result = await agentcheck(repository.path, []);
     assert.equal(result.exitCode, 1);
@@ -460,6 +572,16 @@ test("presentation summarizes severity counts and distinct review topics", () =>
   assert.match(output, /→ Database migration/);
   assert.match(output, /→ Dependency changes/);
 
+
+  const changedReasonOutput = formatReview({
+    ...result,
+    risk: { score: 9, level: "high", contributions: [{ id: "database.migration", points: 5, reason: "Different presentation reason" }] },
+  }, { interactive: false, color: false, width: 88 });
+  assert.match(changedReasonOutput, /\+5 Different presentation reason/);
+  const changedReasonTopics = changedReasonOutput.split("Review before commit:\n")[1] ?? "";
+  assert.match(changedReasonTopics, /→ Dependency changes/);
+  assert.match(changedReasonTopics, /→ Configuration changes/);
+  assert.doesNotMatch(changedReasonTopics, /→ Different presentation reason/);
   const pluralResult: ReviewResult = {
     ...result,
     findings: [
@@ -498,7 +620,7 @@ test("presentation wraps descriptions and verdict boxes without splitting words 
       files: ["packages/cli/src/run-cli.ts"],
       evidence: ["Production lines changed: 37", "Related test files changed: 0"],
     }],
-    risk: { score: 1, level: "low", contributions: [{ points: 1, reason: "Tests may need review" }] },
+    risk: { score: 1, level: "low", contributions: [{ id: "testing.coverage-review-needed", points: 1, reason: "Tests may need review" }] },
     verdict: "REVIEW RECOMMENDED",
   };
 
@@ -565,7 +687,7 @@ function sampleReviewResult(): ReviewResult {
         files: ["appsettings.json"],
       },
     ],
-    risk: { score: 9, level: "high", contributions: [{ points: 5, reason: "Database migration" }] },
+    risk: { score: 9, level: "high", contributions: [{ id: "database.migration", points: 5, reason: "Database migration" }] },
     verdict: "CAREFUL REVIEW RECOMMENDED",
     checkpoint: { schemaVersion: 1, createdAt: "2026-08-27T00:00:00.000Z", head: "1234567890", branch: "main", tree: "tree" },
     current: { head: "1234567890", branch: "main", tree: "tree" },

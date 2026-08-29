@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { clearCheckpoint, createCheckpoint, GitError, reviewChanges } from "@agentcheck/core";
+import { clearCheckpoint, createCheckpoint, GitError, reviewChanges, toReviewReport } from "@agentcheck/core";
 import { createProgress } from "./progress.ts";
 import { formatCheckpointCreated, formatHelp, formatReview, type PresentationOptions } from "./presentation.ts";
 
@@ -24,6 +24,10 @@ export async function runCli(
     return runCheck(cwd, streams);
   }
 
+
+  if (args.length === 3 && command === "check" && args[1] === "--format" && args[2] === "json") {
+    return runJsonCheck(cwd, streams);
+  }
   if (args.length === 1 && command === "start") {
     return runStart(cwd, streams);
   }
@@ -99,6 +103,27 @@ async function runCheck(cwd: string, streams: CliStreams): Promise<number> {
       write(streams.stderr, formatFailure("AgentCheck could not review repository changes.", error));
     }
     return 1;
+  }
+}
+
+async function runJsonCheck(cwd: string, streams: CliStreams): Promise<number> {
+  try {
+    const result = await reviewChanges(cwd);
+    write(streams.stdout, JSON.stringify(toReviewReport(result), null, 2));
+    return 0;
+  } catch (error) {
+    writeJsonCheckFailure(streams.stderr, error);
+    return 1;
+  }
+}
+
+function writeJsonCheckFailure(stream: Pick<NodeJS.WriteStream, "write">, error: unknown): void {
+  if (hasMessage(error, "No active AgentCheck checkpoint")) {
+    write(stream, "No active AgentCheck checkpoint.\n\nRun:\n  agentcheck start");
+  } else if (hasMessage(error, "checkpoint metadata could not be read") || hasMessage(error, "checkpoint metadata is invalid")) {
+    write(stream, "The active AgentCheck checkpoint is corrupted or unsupported.\n\nRun:\n  agentcheck clear\n  agentcheck start");
+  } else {
+    write(stream, formatFailure("AgentCheck could not review repository changes.", error));
   }
 }
 

@@ -35,6 +35,21 @@ agentcheck clear
 - `agentcheck start` — create a checkpoint.
 - `agentcheck` or `agentcheck check` — review changes since the checkpoint.
 - `agentcheck clear` — remove the active checkpoint.
+- `agentcheck check --format json` — emit the schema-versioned Core `ReviewReport` for a completed review.
+
+### JSON review output
+
+`agentcheck check --format json` is for local scripts and tools. On a successful review, stdout contains exactly one pretty-printed JSON document: the Core-owned, schema-versioned `ReviewReport`. Operational errors write a concise diagnostic to stderr and return a non-zero exit code without a partial report. A completed review returns exit code `0` regardless of risk; risk is review information, not process failure.
+
+```json
+{
+  "schemaVersion": 1,
+  "changes": { "files": [] },
+  "findings": [],
+  "risk": { "score": 0, "level": "low", "contributions": [] },
+  "verdict": "LOOKS ROUTINE"
+}
+```
 
 ## Privacy
 

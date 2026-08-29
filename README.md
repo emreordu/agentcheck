@@ -58,6 +58,20 @@ agentcheck clear
 
 `agentcheck check` is an explicit alias for the argumentless review command.
 
+### Scriptable JSON review
+
+For local scripts and tools, use the narrow machine-readable form:
+
+```bash
+agentcheck check --format json
+```
+
+On a successful review, stdout contains exactly one pretty-printed, schema-versioned Core `ReviewReport` JSON document. Operational errors write a concise diagnostic to stderr, emit no partial report, and return a non-zero exit code. A completed review always exits `0`, including when its reported risk is high; the JSON report is review data rather than a CI gate.
+
+```json
+{ "schemaVersion": 1, "changes": { "files": [] }, "findings": [], "risk": { "score": 0, "level": "low", "contributions": [] }, "verdict": "LOOKS ROUTINE" }
+```
+
 The interactive report uses terminal-aware wrapping, compact findings, severity summaries, and an actionable verdict. `NO_COLOR` keeps the same textual information; redirected output remains plain and deterministic.
 
 ### Finding message guidelines
