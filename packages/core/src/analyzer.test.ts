@@ -297,7 +297,7 @@ test("SemanticRiskAnalyzer detects high-confidence security and runtime transiti
   assert.deepEqual(assessRisk({ files: [changed("modified", accessPath)] }, accessFindings), {
     score: 7,
     level: "high",
-    contributions: [{ reason: "Access control weakened", points: 7 }],
+    contributions: [{ id: "security.access-control-weakened", reason: "Access control weakened", points: 7 }],
   });
 
   const nodePath = "src/routes/admin.ts";

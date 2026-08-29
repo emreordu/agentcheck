@@ -62,7 +62,7 @@ function cachedRead(
 function compareFindings(left: Finding, right: Finding): number {
   return severityRank(left.severity) - severityRank(right.severity)
     || left.category.localeCompare(right.category, "en")
-    || left.title.localeCompare(right.title, "en")
+    || (left.id ?? "").localeCompare(right.id ?? "", "en")
     || (left.files[0] ?? "").localeCompare(right.files[0] ?? "", "en")
     || left.description.localeCompare(right.description, "en");
 }

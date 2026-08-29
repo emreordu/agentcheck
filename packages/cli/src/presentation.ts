@@ -325,7 +325,7 @@ function severitySummaryParts(findings: readonly Finding[], pluralize: boolean):
 function reviewTopics(result: ReviewResult): string[] {
   const topics = new Map<string, string>();
   for (const contribution of result.risk.contributions) {
-    topics.set(riskTopicKey(contribution.reason), contribution.reason);
+    topics.set(riskTopicKey(contribution.id), contribution.reason);
   }
   for (const finding of result.findings) {
     if (!topics.has(finding.category)) topics.set(finding.category, categoryLabel(finding.category));
@@ -333,17 +333,16 @@ function reviewTopics(result: ReviewResult): string[] {
   return [...topics.values()].slice(0, 3);
 }
 
-function riskTopicKey(reason: string): string {
-  const normalized = reason.toLowerCase();
-  if (normalized.includes("migration")) return "database";
-  if (normalized.includes("secret")) return "secret";
-  if (normalized.includes("configuration")) return "configuration";
-  if (normalized.includes("dependency")) return "dependency";
-  if (normalized.includes("ci/cd")) return "dangerous-file";
-  if (normalized.includes("large")) return "large-change";
-  if (normalized.includes("test")) return "test-attention";
-  if (normalized.includes("deleted")) return "deleted-file";
-  return "risk:" + normalized;
+function riskTopicKey(id: string | undefined): string {
+  if (id?.startsWith("database.")) return "database";
+  if (id?.startsWith("security.")) return "secret";
+  if (id?.startsWith("configuration.")) return "configuration";
+  if (id?.startsWith("dependency.")) return "dependency";
+  if (id?.startsWith("delivery.")) return "dangerous-file";
+  if (id?.startsWith("testing.")) return "test-attention";
+  if (id === "review.file-deleted") return "deleted-file";
+  if (id?.startsWith("review.")) return "large-change";
+  return `risk:${id ?? "unknown"}`;
 }
 
 function categoryLabel(category: Finding["category"]): string {

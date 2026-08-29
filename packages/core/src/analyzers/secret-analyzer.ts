@@ -1,4 +1,5 @@
 import { compareLines, decodeText } from "../line-diff.ts";
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 interface SecretPattern {
@@ -154,6 +155,7 @@ function signalSignature(signal: SecretSignal): string {
 
 function toFinding(change: FileChange, signal: SecretSignal): Finding {
   return {
+    id: FINDING_IDS.possibleSecret,
     severity: "high",
     category: "secret",
     title: "Possible secret",

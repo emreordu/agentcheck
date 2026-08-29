@@ -1,3 +1,4 @@
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 export class MigrationAnalyzer implements Analyzer {
@@ -29,6 +30,7 @@ function isMigrationSqlFilename(basename: string): boolean {
 function toFinding(change: FileChange): Finding {
   const action = actionFor(change.type);
   return {
+    id: FINDING_IDS.databaseMigrationChanged,
     severity: "high",
     category: "database",
     title: `Database migration ${action.title}`,

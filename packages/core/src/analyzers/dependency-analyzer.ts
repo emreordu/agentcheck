@@ -1,3 +1,4 @@
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 const PACKAGE_JSON_SECTIONS = [
@@ -182,6 +183,7 @@ function getBasename(path: string): string {
 
 function dependencyAddedFinding(path: string, dependency: DependencyEntry): Finding {
   return {
+    id: FINDING_IDS.dependencyAdded,
     severity: "warning",
     category: "dependency",
     title: "Dependency added",
@@ -197,6 +199,7 @@ function dependencyAddedFinding(path: string, dependency: DependencyEntry): Find
 
 function genericManifestFinding(change: FileChange): Finding {
   return {
+    id: FINDING_IDS.dependencyConfigurationChanged,
     severity: "warning",
     category: "dependency",
     title: "Dependency configuration changed",
@@ -208,6 +211,7 @@ function genericManifestFinding(change: FileChange): Finding {
 
 function unparsedManifestFinding(change: FileChange): Finding {
   return {
+    id: FINDING_IDS.dependencyConfigurationChanged,
     severity: "warning",
     category: "dependency",
     title: "Dependency configuration changed",

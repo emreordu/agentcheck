@@ -1,4 +1,5 @@
 import { compareLines, decodeText } from "../line-diff.ts";
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 export const TEST_ATTENTION_THRESHOLDS = {
@@ -162,6 +163,7 @@ function normalizedSubjectName(path: string): string {
 
 function toFileFinding(change: FileChange, changedLines: number, productionFiles: number): Finding {
   return {
+    id: FINDING_IDS.testsNeedReview,
     severity: "warning",
     category: "test-attention",
     title: "Tests may need review",
@@ -177,6 +179,7 @@ function toFileFinding(change: FileChange, changedLines: number, productionFiles
 
 function toSemanticFinding(changes: readonly ProductionChange[]): Finding {
   return {
+    id: FINDING_IDS.testsNeedReview,
     severity: "warning",
     category: "test-attention",
     title: "Tests may need review",
@@ -192,6 +195,7 @@ function toSemanticFinding(changes: readonly ProductionChange[]): Finding {
 
 function toBreadthFinding(changes: readonly ProductionChange[], productionFiles: number): Finding {
   return {
+    id: FINDING_IDS.testsNeedReview,
     severity: "warning",
     category: "test-attention",
     title: "Tests may need review",

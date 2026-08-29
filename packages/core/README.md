@@ -59,3 +59,10 @@ console.log(result.verdict);
 ```
 
 For checkpoint semantics, complete behavior, limitations, and source code, see the [AgentCheck repository](https://github.com/emreordu/agentcheck).
+## v0.2 review report contract
+
+Core exposes `toReviewReport(result)` and `ReviewReport`: schema version `1` is a data-only, JSON-round-trippable review transport model. Finding and risk-contribution IDs are stable lowercase dotted identifiers; titles and reasons remain presentation text and are not identity.
+
+A schema version describes the structure and semantics of the report, independently of checkpoint schema versioning. Version 1 is conservatively compatible only within its major schema version: additions are optional fields; removal, renaming, or semantic reinterpretation requires a new schema version.
+
+Reports include checkpoint/current HEAD and branch context, change paths, findings, risk, and verdict. They intentionally omit checkpoint timestamps and tree IDs (volatile/internal snapshot metadata), source content, Buffers, providers/functions, absolute local paths, Git process state, and secret values. Paths are repository-relative.

@@ -118,7 +118,7 @@ test("includes ignored .env files without including ordinary ignored paths or mu
     assert.deepEqual(result.risk, {
       score: 4,
       level: "medium",
-      contributions: [{ reason: "Production configuration", points: 4 }],
+      contributions: [{ id: "configuration.production-changed", reason: "Production configuration", points: 4 }],
     });
     await clearCheckpoint(repository.path);
     await createCheckpoint(repository.path);

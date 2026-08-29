@@ -1,3 +1,4 @@
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, Finding } from "../types.ts";
 
 export const LARGE_CHANGE_THRESHOLDS = {
@@ -13,6 +14,7 @@ export class LargeChangeAnalyzer implements Analyzer {
 
     if (context.changes.files.length >= LARGE_CHANGE_THRESHOLDS.changedFiles) {
       findings.push({
+        id: FINDING_IDS.largeChangeSet,
         severity: "warning",
         category: "large-change",
         title: "Large change set",
@@ -30,6 +32,7 @@ export class LargeChangeAnalyzer implements Analyzer {
       findings.push({
         severity: "warning",
         category: "large-change",
+        id: FINDING_IDS.largeFileAdded,
         title: "Large file added",
         description: `${change.path} was added with a size of ${formatBytes(content.byteLength)}. Confirm that the file belongs in the repository and does not make reviews or distribution unnecessarily heavy.`,
         files: [change.path],

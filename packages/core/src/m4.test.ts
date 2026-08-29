@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   assessRisk,
+  FINDING_IDS,
   riskLevelForScore,
   SecretAnalyzer,
   TEST_ATTENTION_THRESHOLDS,
@@ -232,8 +233,8 @@ test("risk assessment scores distinct signals once and maps verdicts determinist
     score: 10,
     level: "high",
     contributions: [
-      { reason: "Database migration", points: 5 },
-      { reason: "Possible secret", points: 5 },
+      { id: "database.migration", reason: "Database migration", points: 5 },
+      { id: "security.possible-secret", reason: "Possible secret", points: 5 },
     ],
   });
   assert.equal(verdictForRiskLevel("low"), "LOOKS ROUTINE");
@@ -251,7 +252,7 @@ test("review semantics keep findings, risk, and verdict consistent", () => {
   assert.deepEqual(configurationRisk, {
     score: 1,
     level: "low",
-    contributions: [{ reason: "Configuration changed", points: 1 }],
+    contributions: [{ id: "configuration.changed", reason: "Configuration changed", points: 1 }],
   });
   assert.equal(verdictForReview(configurationRisk.level, [configuration]), "REVIEW RECOMMENDED");
 
@@ -265,14 +266,14 @@ test("review semantics keep findings, risk, and verdict consistent", () => {
   assert.deepEqual(assessRisk({ files: [] }, [configuration, productionConfiguration]), {
     score: 4,
     level: "medium",
-    contributions: [{ reason: "Production configuration", points: 4 }],
+    contributions: [{ id: "configuration.production-changed", reason: "Production configuration", points: 4 }],
   });
   const envConfiguration = { ...productionConfiguration, files: [".env.production"] };
   const envSensitive = { ...finding("sensitive-file", "Sensitive file changed"), files: [".env.production"] };
   assert.deepEqual(assessRisk({ files: [] }, [envConfiguration, envSensitive]), {
     score: 4,
     level: "medium",
-    contributions: [{ reason: "Production configuration", points: 4 }],
+    contributions: [{ id: "configuration.production-changed", reason: "Production configuration", points: 4 }],
   });
   assert.deepEqual(assessRisk(
     { files: [] },
@@ -280,7 +281,7 @@ test("review semantics keep findings, risk, and verdict consistent", () => {
   ), {
     score: 2,
     level: "low",
-    contributions: [{ reason: "Sensitive file changed", points: 2 }],
+    contributions: [{ id: "security.sensitive-file-changed", reason: "Sensitive file changed", points: 2 }],
   });
 
   const migration = { ...finding("database", "Database migration added"), severity: "high" as const };
@@ -292,8 +293,8 @@ test("review semantics keep findings, risk, and verdict consistent", () => {
     score: 8,
     level: "high",
     contributions: [
-      { reason: "Database migration", points: 5 },
-      { reason: "Deleted file", points: 3 },
+      { id: "database.migration", reason: "Database migration", points: 5 },
+      { id: "review.file-deleted", reason: "Deleted file", points: 3 },
     ],
   });
   assert.equal(verdictForReview(highRisk.level, [migration]), "CAREFUL REVIEW RECOMMENDED");
@@ -307,7 +308,7 @@ test("risk assessment does not inflate duplicate deletions or low-confidence dep
   assert.deepEqual(assessRisk(changes, [genericDependency]), {
     score: 3,
     level: "medium",
-    contributions: [{ reason: "Deleted file", points: 3 }],
+    contributions: [{ id: "review.file-deleted", reason: "Deleted file", points: 3 }],
   });
 });
 
@@ -326,12 +327,12 @@ test("risk assessment applies production config, dependency, CI, large-change, d
     score: 15,
     level: "high",
     contributions: [
-      { reason: "Production configuration", points: 4 },
-      { reason: "Dependency addition", points: 3 },
-      { reason: "Deleted file", points: 3 },
-      { reason: "CI/CD change", points: 2 },
-      { reason: "Unusually large change", points: 2 },
-      { reason: "Tests may need review", points: 1 },
+      { id: "configuration.production-changed", reason: "Production configuration", points: 4 },
+      { id: "dependency.added", reason: "Dependency addition", points: 3 },
+      { id: "review.file-deleted", reason: "Deleted file", points: 3 },
+      { id: "delivery.ci-cd-changed", reason: "CI/CD change", points: 2 },
+      { id: "review.large-change", reason: "Unusually large change", points: 2 },
+      { id: "testing.coverage-review-needed", reason: "Tests may need review", points: 1 },
     ],
   });
 });
@@ -344,7 +345,8 @@ test("risk level boundaries are 0-2 low, 3-6 medium, and 7+ high", () => {
 });
 
 function finding(category: Finding["category"], title: string): Finding {
-  return { severity: "warning", category, title, description: title, files: [] };
+  const id = title === "Production configuration changed" ? FINDING_IDS.productionConfigurationChanged : title === "Dependency added" ? FINDING_IDS.dependencyAdded : title === "CI/CD configuration changed" ? FINDING_IDS.ciCdConfigurationChanged : title === "Possible secret" ? FINDING_IDS.possibleSecret : title === "Database migration added" ? FINDING_IDS.databaseMigrationChanged : title === "Large change set" ? FINDING_IDS.largeChangeSet : title === "Tests may need review" ? FINDING_IDS.testsNeedReview : FINDING_IDS.configurationChanged;
+  return { id, severity: "warning", category, title, description: title, files: [] };
 }
 
 function assertSecretAbsent(output: string, secret: string): void {

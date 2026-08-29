@@ -1,3 +1,4 @@
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 const EXACT_BASENAMES = new Set([
@@ -54,6 +55,7 @@ function toFinding(change: FileChange): Finding {
       : "Configuration changed";
 
   return {
+    id: production ? FINDING_IDS.productionConfigurationChanged : deleted ? FINDING_IDS.configurationFileDeleted : FINDING_IDS.configurationChanged,
     severity,
     category: "configuration",
     title,

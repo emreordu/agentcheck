@@ -59,6 +59,8 @@ export type FindingCategory =
   | "sensitive-file";
 
 export interface Finding {
+  /** Stable built-in machine identity. */
+  id?: import("./stable-ids.ts").FindingId;
   severity: FindingSeverity;
   category: FindingCategory;
   title: string;
@@ -86,6 +88,8 @@ export type Verdict =
   | "CAREFUL REVIEW RECOMMENDED";
 
 export interface RiskContribution {
+  /** Stable built-in machine identity. */
+  id?: import("./stable-ids.ts").RiskContributionId;
   reason: string;
   points: number;
 }

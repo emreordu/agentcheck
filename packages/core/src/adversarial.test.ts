@@ -193,11 +193,11 @@ test("multiple risk categories remain deterministic, category-deduplicated, and 
     score: 16,
     level: "high",
     contributions: [
-      { reason: "Database migration", points: 5 },
-      { reason: "Production configuration", points: 4 },
-      { reason: "Dependency addition", points: 3 },
-      { reason: "Deleted file", points: 3 },
-      { reason: "Tests may need review", points: 1 },
+      { id: "database.migration", reason: "Database migration", points: 5 },
+      { id: "configuration.production-changed", reason: "Production configuration", points: 4 },
+      { id: "dependency.added", reason: "Dependency addition", points: 3 },
+      { id: "review.file-deleted", reason: "Deleted file", points: 3 },
+      { id: "testing.coverage-review-needed", reason: "Tests may need review", points: 1 },
     ],
   });
   assert.equal(verdictForReview(risk.level, first), "CAREFUL REVIEW RECOMMENDED");
@@ -245,8 +245,8 @@ test("a deleted migration combines one database signal with one deletion contrib
     score: 8,
     level: "high",
     contributions: [
-      { reason: "Database migration", points: 5 },
-      { reason: "Deleted file", points: 3 },
+      { id: "database.migration", reason: "Database migration", points: 5 },
+      { id: "review.file-deleted", reason: "Deleted file", points: 3 },
     ],
   });
   assert.equal(verdictForReview(risk.level, findings), "CAREFUL REVIEW RECOMMENDED");
@@ -264,7 +264,7 @@ test("a standalone high finding cannot produce a routine verdict even below the 
   assert.deepEqual(risk, {
     score: 5,
     level: "medium",
-    contributions: [{ reason: "Database migration", points: 5 }],
+    contributions: [{ id: "database.migration", reason: "Database migration", points: 5 }],
   });
   assert.equal(verdictForReview(risk.level, [finding]), "CAREFUL REVIEW RECOMMENDED");
 });

@@ -1,4 +1,5 @@
 import { compareLines, decodeText } from "../line-diff.ts";
+import { FINDING_IDS } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 const SENSITIVE_PATH = /(?:^|\/)(?:\.env(?:\.[^/]+)?|[^/]*\.(?:pem|key)|(?:credentials|secrets|service-account)[^/]*\.(?:json|ya?ml)|\.npmrc|\.pypirc|gradle\.properties)$/i;
@@ -169,29 +170,29 @@ function normalizePath(path: string): string {
 }
 
 function accessControlFinding(change: FileChange): Finding {
-  return finding("high", "Access control weakened", "An existing protected surface appears to have been changed to permit unauthenticated access.", change, ["Authorization protection removed", "Anonymous access introduced"]);
+  return finding(FINDING_IDS.accessControlWeakened, "high", "Access control weakened", "An existing protected surface appears to have been changed to permit unauthenticated access.", change, ["Authorization protection removed", "Anonymous access introduced"]);
 }
 
 function anonymousAccessFinding(change: FileChange): Finding {
-  return finding("warning", "Anonymous access introduced", "A new surface explicitly permits unauthenticated access. Confirm that public exposure is intentional.", change, ["Explicit anonymous/public access introduced"]);
+  return finding(FINDING_IDS.anonymousAccessIntroduced, "warning", "Anonymous access introduced", "A new surface explicitly permits unauthenticated access. Confirm that public exposure is intentional.", change, ["Explicit anonymous/public access introduced"]);
 }
 
 function disabledSecurityFinding(change: FileChange, evidence: string): Finding {
-  return finding("high", "Security behavior disabled", "An existing security or runtime call appears to have been disabled by commenting it out.", change, [evidence]);
+  return finding(FINDING_IDS.securityBehaviorDisabled, "high", "Security behavior disabled", "An existing security or runtime call appears to have been disabled by commenting it out.", change, [evidence]);
 }
 
 function bootstrapFinding(change: FileChange): Finding {
-  return finding("warning", "Application bootstrap changed", "An application entrypoint received executable runtime wiring changes. Review startup and request-pipeline behavior.", change, ["Application entrypoint modified", "Executable runtime wiring changed"]);
+  return finding(FINDING_IDS.bootstrapChanged, "warning", "Application bootstrap changed", "An application entrypoint received executable runtime wiring changes. Review startup and request-pipeline behavior.", change, ["Application entrypoint modified", "Executable runtime wiring changed"]);
 }
 
 function testDisabledFinding(change: FileChange): Finding {
-  return finding("warning", "Tests may have been disabled", "A test was explicitly marked to skip or disable. Confirm that the coverage gap is intentional.", change, ["Explicit test-disable marker introduced"]);
+  return finding(FINDING_IDS.testDisabled, "warning", "Tests may have been disabled", "A test was explicitly marked to skip or disable. Confirm that the coverage gap is intentional.", change, ["Explicit test-disable marker introduced"]);
 }
 
 function sensitiveFileFinding(change: FileChange): Finding {
-  return finding("warning", "Sensitive file changed", "A sensitive credential or key-file path changed. Review the diff and ensure no credentials were introduced.", change, ["Sensitive path classification"], "sensitive-file");
+  return finding(FINDING_IDS.sensitiveFileChanged, "warning", "Sensitive file changed", "A sensitive credential or key-file path changed. Review the diff and ensure no credentials were introduced.", change, ["Sensitive path classification"], "sensitive-file");
 }
 
-function finding(severity: Finding["severity"], title: string, description: string, change: FileChange, evidence: string[], category: Finding["category"] = "semantic-risk"): Finding {
-  return { severity, category, title, description, files: [change.path], evidence };
+function finding(id: NonNullable<Finding["id"]>, severity: Finding["severity"], title: string, description: string, change: FileChange, evidence: string[], category: Finding["category"] = "semantic-risk"): Finding {
+  return { id, severity, category, title, description, files: [change.path], evidence };
 }

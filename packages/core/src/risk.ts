@@ -1,3 +1,4 @@
+import { FINDING_IDS, RISK_CONTRIBUTION_IDS } from "./stable-ids.ts";
 import type { ChangeSet, Finding, RiskAssessment, RiskLevel, Verdict } from "./types.ts";
 
 export const RISK_LEVEL_THRESHOLDS = {
@@ -24,69 +25,31 @@ export const RISK_WEIGHTS = {
 } as const;
 
 interface RiskRule {
+  id: NonNullable<import("./types.ts").RiskContribution["id"]>;
   reason: string;
   points: number;
   applies(changes: ChangeSet, findings: readonly Finding[]): boolean;
 }
 
 const RISK_RULES: readonly RiskRule[] = [
-  { reason: "Access control weakened", points: RISK_WEIGHTS.accessControlWeakened, applies: (_, findings) => findings.some((finding) => finding.title === "Access control weakened") },
-  { reason: "Security behavior disabled", points: RISK_WEIGHTS.securityBehaviorDisabled, applies: (_, findings) => findings.some((finding) => finding.title === "Security behavior disabled") },
-  { reason: "Anonymous access introduced", points: RISK_WEIGHTS.anonymousAccessIntroduced, applies: (_, findings) => findings.some((finding) => finding.title === "Anonymous access introduced") },
-  { reason: "Application bootstrap changed", points: RISK_WEIGHTS.bootstrapChanged, applies: (_, findings) => findings.some((finding) => finding.title === "Application bootstrap changed") },
-  { reason: "Tests may have been disabled", points: RISK_WEIGHTS.testDisabled, applies: (_, findings) => findings.some((finding) => finding.title === "Tests may have been disabled") },
-  { reason: "Sensitive file changed", points: RISK_WEIGHTS.sensitiveFileChanged, applies: (_, findings) => hasStandaloneSensitiveFile(findings) },
-  {
-    reason: "Database migration",
-    points: RISK_WEIGHTS.migration,
-    applies: (_, findings) => findings.some((finding) => finding.category === "database"),
-  },
-  {
-    reason: "Possible secret",
-    points: RISK_WEIGHTS.possibleSecret,
-    applies: (_, findings) => findings.some((finding) => finding.category === "secret"),
-  },
-  {
-    reason: "Production configuration",
-    points: RISK_WEIGHTS.productionConfiguration,
-    applies: (_, findings) => findings.some((finding) =>
-      finding.category === "configuration" && finding.title === "Production configuration changed"),
-  },
-  {
-    reason: "Configuration changed",
-    points: RISK_WEIGHTS.configurationChange,
-    applies: (_, findings) => findings.some((finding) => finding.category === "configuration")
-      && !findings.some((finding) =>
-        finding.category === "configuration" && finding.title === "Production configuration changed"),
-  },
-  {
-    reason: "Dependency addition",
-    points: RISK_WEIGHTS.dependencyAddition,
-    applies: (_, findings) => findings.some((finding) =>
-      finding.category === "dependency" && finding.title === "Dependency added"),
-  },
-  {
-    reason: "Deleted file",
-    points: RISK_WEIGHTS.deletedFile,
-    applies: (changes) => changes.files.some((file) => file.type === "deleted"),
-  },
-  {
-    reason: "CI/CD change",
-    points: RISK_WEIGHTS.ciCdChange,
-    applies: (_, findings) => findings.some((finding) =>
-      finding.category === "dangerous-file" && finding.title.startsWith("CI/CD")),
-  },
-  {
-    reason: "Unusually large change",
-    points: RISK_WEIGHTS.largeChange,
-    applies: (_, findings) => findings.some((finding) => finding.category === "large-change"),
-  },
-  {
-    reason: "Tests may need review",
-    points: RISK_WEIGHTS.testAttention,
-    applies: (_, findings) => findings.some((finding) => finding.category === "test-attention"),
-  },
+  { id: RISK_CONTRIBUTION_IDS.accessControlWeakened, reason: "Access control weakened", points: RISK_WEIGHTS.accessControlWeakened, applies: (_, findings) => hasFinding(findings, FINDING_IDS.accessControlWeakened) },
+  { id: RISK_CONTRIBUTION_IDS.securityBehaviorDisabled, reason: "Security behavior disabled", points: RISK_WEIGHTS.securityBehaviorDisabled, applies: (_, findings) => hasFinding(findings, FINDING_IDS.securityBehaviorDisabled) },
+  { id: RISK_CONTRIBUTION_IDS.anonymousAccessIntroduced, reason: "Anonymous access introduced", points: RISK_WEIGHTS.anonymousAccessIntroduced, applies: (_, findings) => hasFinding(findings, FINDING_IDS.anonymousAccessIntroduced) },
+  { id: RISK_CONTRIBUTION_IDS.bootstrapChanged, reason: "Application bootstrap changed", points: RISK_WEIGHTS.bootstrapChanged, applies: (_, findings) => hasFinding(findings, FINDING_IDS.bootstrapChanged) },
+  { id: RISK_CONTRIBUTION_IDS.testDisabled, reason: "Tests may have been disabled", points: RISK_WEIGHTS.testDisabled, applies: (_, findings) => hasFinding(findings, FINDING_IDS.testDisabled) },
+  { id: RISK_CONTRIBUTION_IDS.sensitiveFileChanged, reason: "Sensitive file changed", points: RISK_WEIGHTS.sensitiveFileChanged, applies: (_, findings) => hasStandaloneSensitiveFile(findings) },
+  { id: RISK_CONTRIBUTION_IDS.databaseMigration, reason: "Database migration", points: RISK_WEIGHTS.migration, applies: (_, findings) => findings.some((finding) => finding.category === "database") },
+  { id: RISK_CONTRIBUTION_IDS.possibleSecret, reason: "Possible secret", points: RISK_WEIGHTS.possibleSecret, applies: (_, findings) => findings.some((finding) => finding.category === "secret") },
+  { id: RISK_CONTRIBUTION_IDS.productionConfiguration, reason: "Production configuration", points: RISK_WEIGHTS.productionConfiguration, applies: (_, findings) => hasFinding(findings, FINDING_IDS.productionConfigurationChanged) },
+  { id: RISK_CONTRIBUTION_IDS.configurationChanged, reason: "Configuration changed", points: RISK_WEIGHTS.configurationChange, applies: (_, findings) => findings.some((finding) => finding.category === "configuration") && !hasFinding(findings, FINDING_IDS.productionConfigurationChanged) },
+  { id: RISK_CONTRIBUTION_IDS.dependencyAdded, reason: "Dependency addition", points: RISK_WEIGHTS.dependencyAddition, applies: (_, findings) => hasFinding(findings, FINDING_IDS.dependencyAdded) },
+  { id: RISK_CONTRIBUTION_IDS.deletedFile, reason: "Deleted file", points: RISK_WEIGHTS.deletedFile, applies: (changes) => changes.files.some((file) => file.type === "deleted") },
+  { id: RISK_CONTRIBUTION_IDS.ciCdChange, reason: "CI/CD change", points: RISK_WEIGHTS.ciCdChange, applies: (_, findings) => hasFinding(findings, FINDING_IDS.ciCdConfigurationChanged) || hasFinding(findings, FINDING_IDS.ciCdFileDeleted) },
+  { id: RISK_CONTRIBUTION_IDS.largeChange, reason: "Unusually large change", points: RISK_WEIGHTS.largeChange, applies: (_, findings) => findings.some((finding) => finding.category === "large-change") },
+  { id: RISK_CONTRIBUTION_IDS.testsNeedReview, reason: "Tests may need review", points: RISK_WEIGHTS.testAttention, applies: (_, findings) => findings.some((finding) => finding.category === "test-attention") },
 ];
+
+function hasFinding(findings: readonly Finding[], id: NonNullable<Finding["id"]>): boolean { return findings.some((finding) => finding.id === id); }
 
 function hasStandaloneSensitiveFile(findings: readonly Finding[]): boolean {
   const configurationPaths = new Set(
@@ -100,7 +63,7 @@ function hasStandaloneSensitiveFile(findings: readonly Finding[]): boolean {
 export function assessRisk(changes: ChangeSet, findings: readonly Finding[]): RiskAssessment {
   const contributions = RISK_RULES
     .filter((rule) => rule.applies(changes, findings))
-    .map(({ reason, points }) => ({ reason, points }));
+    .map(({ id, reason, points }) => ({ id, reason, points }));
   const score = contributions.reduce((total, contribution) => total + contribution.points, 0);
   return { score, level: riskLevelForScore(score), contributions };
 }
