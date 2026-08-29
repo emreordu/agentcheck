@@ -1,5 +1,6 @@
 import { compareLines, decodeText } from "../line-diff.ts";
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 const SENSITIVE_PATH = /(?:^|\/)(?:\.env(?:\.[^/]+)?|[^/]*\.(?:pem|key)|(?:credentials|secrets|service-account)[^/]*\.(?:json|ya?ml)|\.npmrc|\.pypirc|gradle\.properties)$/i;
@@ -194,5 +195,5 @@ function sensitiveFileFinding(change: FileChange): Finding {
 }
 
 function finding(id: NonNullable<Finding["id"]>, severity: Finding["severity"], title: string, description: string, change: FileChange, evidence: string[], category: Finding["category"] = "semantic-risk"): Finding {
-  return { id, severity, category, title, description, files: [change.path], evidence };
+  return { id, severity, category, title, description, action: actionForFinding(id), files: [change.path], evidence };
 }

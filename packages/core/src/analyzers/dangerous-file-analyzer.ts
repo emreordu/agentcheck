@@ -1,4 +1,6 @@
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
+import type { FindingId } from "../stable-ids.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 export class DangerousFileAnalyzer implements Analyzer {
@@ -30,18 +32,20 @@ function toFinding(change: FileChange): Finding {
 
   const deleted = change.type === "deleted";
   const title = titleFor(kind, deleted);
+  const id = idFor(kind, deleted);
   return {
-    id: idFor(kind, deleted),
+    id,
     severity: deleted ? "high" : "warning",
     category: "dangerous-file",
     title,
     description: descriptionFor(kind, change),
+    action: actionForFinding(id),
     files: [change.path],
     evidence: [`Change type: ${change.type}`],
   };
 }
 
-function idFor(kind: DangerousKind, deleted: boolean): Finding["id"] {
+function idFor(kind: DangerousKind, deleted: boolean): FindingId {
   if (deleted) return kind === "ci" ? FINDING_IDS.ciCdFileDeleted : FINDING_IDS.repositoryControlFileDeleted;
   if (kind === "gitignore") return FINDING_IDS.gitIgnoreChanged;
   if (kind === "gitattributes") return FINDING_IDS.gitAttributesChanged;

@@ -1,4 +1,5 @@
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 const PACKAGE_JSON_SECTIONS = [
@@ -188,6 +189,7 @@ function dependencyAddedFinding(path: string, dependency: DependencyEntry): Find
     category: "dependency",
     title: "Dependency added",
     description: `${dependency.name} was added to this manifest. Review its source, version, license, and compatibility with the project.`,
+    action: actionForFinding(FINDING_IDS.dependencyAdded),
     files: [path],
     evidence: [
       `Dependency: ${dependency.name}`,
@@ -204,6 +206,7 @@ function genericManifestFinding(change: FileChange): Finding {
     category: "dependency",
     title: "Dependency configuration changed",
     description: `A dependency manifest was ${describeChange(change.type)}. Review the diff for added, removed, or updated packages and lockfile implications.`,
+    action: actionForFinding(FINDING_IDS.dependencyConfigurationChanged),
     files: [change.path],
     evidence: ["No semantic parser is enabled for this manifest type."],
   };
@@ -216,6 +219,7 @@ function unparsedManifestFinding(change: FileChange): Finding {
     category: "dependency",
     title: "Dependency configuration changed",
     description: "A dependency manifest changed but could not be compared semantically. Inspect the diff for package and version changes.",
+    action: actionForFinding(FINDING_IDS.dependencyConfigurationChanged),
     files: [change.path],
     evidence: ["Semantic comparison was unavailable because the manifest content was invalid."],
   };

@@ -240,6 +240,7 @@ test("analyzeChanges caches content reads and sorts findings deterministically",
     category,
     title,
     description: title,
+    action: "Review the finding.",
     files: ["file.ts"],
   });
   const analyzers: Analyzer[] = [

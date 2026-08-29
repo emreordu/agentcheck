@@ -258,6 +258,7 @@ test("a standalone high finding cannot produce a routine verdict even below the 
     category: "database",
     title: "Database migration added",
     description: "A migration-related file was added. Review schema changes, destructive operations, data transformations, and rollback implications.",
+    action: "Review the migration.",
     files: ["Migrations/Add.sql"],
   };
   const risk = assessRisk({ files: [] }, [finding]);

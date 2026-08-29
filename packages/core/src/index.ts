@@ -17,6 +17,7 @@ export { isTestPath, TEST_ATTENTION_THRESHOLDS, TestChangeAnalyzer } from "./ana
 export { assessRisk, RISK_LEVEL_THRESHOLDS, RISK_WEIGHTS, riskLevelForScore, verdictForRiskLevel } from "./risk.ts";
 export { GitError, resolveRepository } from "./git.ts";
 export { FINDING_IDS, RISK_CONTRIBUTION_IDS, BUILT_IN_FINDING_IDS, BUILT_IN_RISK_CONTRIBUTION_IDS } from "./stable-ids.ts";
+export { BUILT_IN_FINDING_ACTIONS, actionForFinding } from "./finding-actions.ts";
 export { REVIEW_REPORT_SCHEMA_VERSION, toReviewReport } from "./review-report.ts";
 export type {
   ChangeSet,

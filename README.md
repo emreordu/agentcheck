@@ -79,8 +79,9 @@ The interactive report uses terminal-aware wrapping, compact findings, severity 
 Analyzer messages distinguish observed facts from review guidance:
 
 - **Title:** a short, specific noun/action phrase, such as `Database migration added`.
-- **Description:** why the deterministic signal may matter and, when useful, what to inspect.
+- **Description:** why the deterministic signal may matter.
 - **Evidence:** only facts AgentCheck observed, such as a change type, manifest section, or detected signal; it does not contain interpretation or secret values.
+- **Action:** the concise, deterministic next inspection step authored by the Core rule; it is separate from the observed rationale and never contains secret values.
 
 Messages use neutral language such as “may change” when AgentCheck cannot determine the semantic impact.
 
@@ -92,7 +93,7 @@ The v0.1 analyzers flag migration-related files; recognized configuration files;
 
 Install AgentCheck directly from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=agentcheck.agentcheck-vscode). The extension ID is `agentcheck.agentcheck-vscode`.
 
-The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Findings, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with details and evidence, risk, and verdict; file items open workspace files. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
+The thin extension uses the same `@agentcheck/core` workflow as the CLI. Its command palette provides Create Checkpoint, Review Changes, Show Findings, and Clear Checkpoint. The AgentCheck activity view shows changes, findings with rationale, review actions, and evidence, risk, and verdict; file items open workspace files. The status bar shows an active checkpoint before review and the latest risk level afterward. Analysis is command-driven; the extension performs no startup scan or background monitoring.
 
 ## Core library
 

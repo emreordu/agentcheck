@@ -1,5 +1,6 @@
 import { compareLines, decodeText } from "../line-diff.ts";
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 export const TEST_ATTENTION_THRESHOLDS = {
@@ -167,6 +168,7 @@ function toFileFinding(change: FileChange, changedLines: number, productionFiles
     severity: "warning",
     category: "test-attention",
     title: "Tests may need review",
+    action: actionForFinding(FINDING_IDS.testsNeedReview),
     description: "A substantial production-source change has no related changed test file. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.",
     files: [change.path],
     evidence: [
@@ -183,6 +185,7 @@ function toSemanticFinding(changes: readonly ProductionChange[]): Finding {
     severity: "warning",
     category: "test-attention",
     title: "Tests may need review",
+    action: actionForFinding(FINDING_IDS.testsNeedReview),
     description: "A new public production surface and application bootstrap wiring changed without related changed tests. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.",
     files: changes.map(({ change }) => change.path).sort((left, right) => left.localeCompare(right, "en")),
     evidence: [
@@ -199,6 +202,7 @@ function toBreadthFinding(changes: readonly ProductionChange[], productionFiles:
     severity: "warning",
     category: "test-attention",
     title: "Tests may need review",
+    action: actionForFinding(FINDING_IDS.testsNeedReview),
     description: `${productionFiles} production source files changed without related changed test files for the listed paths. Verify that the changed behavior remains covered and existing assertions were not weakened or removed unintentionally.`,
     files: changes.map(({ change }) => change.path).sort((left, right) => left.localeCompare(right, "en")),
     evidence: [

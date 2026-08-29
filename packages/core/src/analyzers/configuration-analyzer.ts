@@ -1,4 +1,5 @@
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 const EXACT_BASENAMES = new Set([
@@ -53,13 +54,15 @@ function toFinding(change: FileChange): Finding {
     : deleted
       ? "Configuration file deleted"
       : "Configuration changed";
+  const id = production ? FINDING_IDS.productionConfigurationChanged : deleted ? FINDING_IDS.configurationFileDeleted : FINDING_IDS.configurationChanged;
 
   return {
-    id: production ? FINDING_IDS.productionConfigurationChanged : deleted ? FINDING_IDS.configurationFileDeleted : FINDING_IDS.configurationChanged,
+    id,
     severity,
     category: "configuration",
     title,
     description: descriptionFor(change, production, deleted),
+    action: actionForFinding(id),
     files: [change.path],
     evidence: [`Change type: ${change.type}`],
   };

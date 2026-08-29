@@ -1,5 +1,6 @@
 import { compareLines, decodeText } from "../line-diff.ts";
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 interface SecretPattern {
@@ -160,6 +161,7 @@ function toFinding(change: FileChange, signal: SecretSignal): Finding {
     category: "secret",
     title: "Possible secret",
     description: `${signal.label} was introduced in changed text. Confirm that it is not a credential that should be stored outside version control.`,
+    action: actionForFinding(FINDING_IDS.possibleSecret),
     files: [change.path],
     evidence: [
       `Signal: ${signal.label}`,

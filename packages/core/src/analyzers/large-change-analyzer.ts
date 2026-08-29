@@ -1,4 +1,5 @@
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, Finding } from "../types.ts";
 
 export const LARGE_CHANGE_THRESHOLDS = {
@@ -19,6 +20,7 @@ export class LargeChangeAnalyzer implements Analyzer {
         category: "large-change",
         title: "Large change set",
         description: `${context.changes.files.length} files changed since checkpoint. Review the change set in manageable groups and confirm that its scope is intentional.`,
+        action: actionForFinding(FINDING_IDS.largeChangeSet),
         files: [],
         evidence: [`Changed file threshold: ${LARGE_CHANGE_THRESHOLDS.changedFiles}`],
       });
@@ -35,6 +37,7 @@ export class LargeChangeAnalyzer implements Analyzer {
         id: FINDING_IDS.largeFileAdded,
         title: "Large file added",
         description: `${change.path} was added with a size of ${formatBytes(content.byteLength)}. Confirm that the file belongs in the repository and does not make reviews or distribution unnecessarily heavy.`,
+        action: actionForFinding(FINDING_IDS.largeFileAdded),
         files: [change.path],
         evidence: [
           `Added file size: ${content.byteLength} bytes`,

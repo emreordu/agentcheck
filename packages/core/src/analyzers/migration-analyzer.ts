@@ -1,4 +1,5 @@
 import { FINDING_IDS } from "../stable-ids.ts";
+import { actionForFinding } from "../finding-actions.ts";
 import type { AnalysisContext, Analyzer, FileChange, Finding } from "../types.ts";
 
 export class MigrationAnalyzer implements Analyzer {
@@ -35,6 +36,7 @@ function toFinding(change: FileChange): Finding {
     category: "database",
     title: `Database migration ${action.title}`,
     description: `A migration-related file was ${action.description}. Review schema changes, destructive operations, data transformations, and rollback implications.`,
+    action: actionForFinding(FINDING_IDS.databaseMigrationChanged),
     files: [change.path],
     evidence: [`Change type: ${change.type}`],
   };

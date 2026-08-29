@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import type { ReviewResult } from "@agentcheck/core";
+import { actionForFinding, FINDING_IDS, type ReviewResult } from "@agentcheck/core";
 import { formatReview } from "./presentation.ts";
 import { createProgress } from "./progress.ts";
 
@@ -142,13 +142,14 @@ test("JSON review preserves high-risk IDs and redacts source secrets", async () 
     await write(repository.path, "Migrations/20260829_AddOrderIndex.cs", "// migration\n");
 
     const result = await agentcheck(repository.path, ["check", "--format", "json"]);
-    const report = JSON.parse(result.stdout) as { findings: { id?: string }[]; risk: { level: string; contributions: { id?: string }[] }; verdict: string };
+    const report = JSON.parse(result.stdout) as { findings: { id?: string; action?: string }[]; risk: { level: string; contributions: { id?: string }[] }; verdict: string };
     assert.equal(result.exitCode, 0);
     assert.equal(result.stderr, "");
     assert.equal(report.risk.level, "high");
     assert.equal(report.verdict, "CAREFUL REVIEW RECOMMENDED");
     assert.deepEqual(report.findings.map((finding) => finding.id), ["database.migration-changed", "security.possible-secret", "configuration.production-changed", "dependency.added", "testing.coverage-review-needed"]);
     assert.deepEqual(report.risk.contributions.map((contribution) => contribution.id), ["database.migration", "security.possible-secret", "configuration.production-changed", "dependency.added", "testing.coverage-review-needed"]);
+    assert.equal(report.findings[0]?.action, actionForFinding(FINDING_IDS.databaseMigrationChanged));
     assert.doesNotMatch(result.stdout, new RegExp(fakeCredential));
     assert.doesNotMatch(result.stdout, /AGENTCHECK|CHANGES|FINDINGS|RISK|VERDICT|Baseline loaded|Analysis complete/);
   } finally {
@@ -550,6 +551,7 @@ test("presentation summarizes severity counts and distinct review topics", () =>
         category: "configuration",
         title: "Configuration file deleted",
         description: "A configuration file was deleted.",
+        action: "Confirm the deleted configuration is no longer needed.",
         files: ["config/legacy.json"],
       },
       {
@@ -557,6 +559,7 @@ test("presentation summarizes severity counts and distinct review topics", () =>
         category: "dependency",
         title: "Dependency configuration changed",
         description: "A dependency manifest changed.",
+        action: "Review the dependency manifest.",
         files: ["package-lock.json"],
       },
     ],
@@ -591,6 +594,7 @@ test("presentation summarizes severity counts and distinct review topics", () =>
         category: "secret",
         title: "Possible secret",
         description: "A possible secret was introduced.",
+        action: "Review the credential handling.",
         files: [".env"],
       },
       {
@@ -598,6 +602,7 @@ test("presentation summarizes severity counts and distinct review topics", () =>
         category: "large-change",
         title: "Large change detected",
         description: "A large change was detected.",
+        action: "Review the large change.",
         files: ["src/large.ts"],
       },
     ],
@@ -617,6 +622,7 @@ test("presentation wraps descriptions and verdict boxes without splitting words 
       category: "test-attention",
       title: "Tests may need review",
       description,
+      action: "Review related tests and verify the changed behavior remains covered.",
       files: ["packages/cli/src/run-cli.ts"],
       evidence: ["Production lines changed: 37", "Related test files changed: 0"],
     }],
@@ -631,6 +637,8 @@ test("presentation wraps descriptions and verdict boxes without splitting words 
   for (const word of description.split(" ")) assert.ok(output.includes(word));
   assert.match(output, /  A substantial production-source change/);
   assert.match(output, /    - Production lines changed: 37/);
+  assert.match(output, /  Review:/);
+  assert.match(output, /  Review related tests and verify the\n  changed behavior remains covered\./);
 });
 
 test("presentation keeps zero-finding reviews concise", () => {
@@ -677,6 +685,7 @@ function sampleReviewResult(): ReviewResult {
         category: "database",
         title: "Database migration added",
         description: "A migration-related file was added. Review schema changes.",
+        action: "Review the migration for rollback implications.",
         files: ["Migrations/20260819_AddOrderIndex.cs"],
       },
       {
@@ -684,6 +693,7 @@ function sampleReviewResult(): ReviewResult {
         category: "configuration",
         title: "Configuration changed",
         description: "A configuration file changed.",
+        action: "Review the changed runtime configuration.",
         files: ["appsettings.json"],
       },
     ],

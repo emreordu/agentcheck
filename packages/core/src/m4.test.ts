@@ -87,6 +87,7 @@ test("SecretAnalyzer recognizes token assignments only when newly introduced", a
   ));
   assert.equal(findings.length, 1);
   assertSecretAbsent(JSON.stringify(findings), fakeToken);
+  assertSecretAbsent(findings[0]?.action ?? "", fakeToken);
 });
 
 test("TestChangeAnalyzer reports substantial production changes without related changed tests", async () => {
@@ -346,7 +347,7 @@ test("risk level boundaries are 0-2 low, 3-6 medium, and 7+ high", () => {
 
 function finding(category: Finding["category"], title: string): Finding {
   const id = title === "Production configuration changed" ? FINDING_IDS.productionConfigurationChanged : title === "Dependency added" ? FINDING_IDS.dependencyAdded : title === "CI/CD configuration changed" ? FINDING_IDS.ciCdConfigurationChanged : title === "Possible secret" ? FINDING_IDS.possibleSecret : title === "Database migration added" ? FINDING_IDS.databaseMigrationChanged : title === "Large change set" ? FINDING_IDS.largeChangeSet : title === "Tests may need review" ? FINDING_IDS.testsNeedReview : FINDING_IDS.configurationChanged;
-  return { id, severity: "warning", category, title, description: title, files: [] };
+  return { id, severity: "warning", category, title, description: title, action: "Review the finding.", files: [] };
 }
 
 function assertSecretAbsent(output: string, secret: string): void {

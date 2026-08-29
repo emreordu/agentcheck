@@ -198,6 +198,8 @@ function formatFinding(finding: Finding, options: PresentationOptions): string {
     ...wrapText(finding.description, options, 2),
   ];
 
+  details.push("", "  " + subtle("Review:", options), ...wrapText(finding.action, options, 2));
+
   if (finding.evidence?.length) {
     details.push("", "  " + subtle("Evidence:", options));
     for (const evidence of finding.evidence) details.push(...wrapBullet(evidence, options));

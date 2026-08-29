@@ -65,6 +65,8 @@ export interface Finding {
   category: FindingCategory;
   title: string;
   description: string;
+  /** Deterministic, Core-authored next inspection step. */
+  action: string;
   files: string[];
   evidence?: string[];
 }

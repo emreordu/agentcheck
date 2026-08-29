@@ -49,7 +49,7 @@ export interface FileNode {
 
 export interface DetailNode {
   kind: "detail";
-  label: "Why it matters";
+  label: "Why it matters" | "Review";
   value: string;
 }
 
@@ -145,6 +145,7 @@ function sectionChildren(node: SectionNode): FindingTreeNode[] {
 function findingChildren(finding: Finding): FindingTreeNode[] {
   const children: FindingTreeNode[] = finding.files.map((path) => ({ kind: "file", path }));
   children.push({ kind: "detail", label: "Why it matters", value: finding.description });
+  children.push({ kind: "detail", label: "Review", value: finding.action });
   if (finding.evidence?.length) {
     children.push({ kind: "evidence-group", evidence: finding.evidence });
   }

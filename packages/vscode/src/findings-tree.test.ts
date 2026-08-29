@@ -41,11 +41,12 @@ test("represents finding files, why it matters, and evidence by severity", () =>
   const findingNode = childrenOf(severity)[0]!;
   assert.equal(findingNode.kind, "finding");
   const details = childrenOf(findingNode);
-  assert.deepEqual(details.slice(0, 2), [
+  assert.deepEqual(details.slice(0, 3), [
     { kind: "file", path: "appsettings.json" },
     { kind: "detail", label: "Why it matters", value: "Credentials can be exposed." },
+    { kind: "detail", label: "Review", value: "Review Possible secret" },
   ]);
-  const evidence = details[2]!;
+  const evidence = details[3]!;
   assert.equal(evidence.kind, "evidence-group");
   assert.deepEqual(childrenOf(evidence), [
     { kind: "evidence", value: "Matched value: ********" },
@@ -92,5 +93,5 @@ function review(overrides: Partial<ReviewPresentation> = {}): ReviewPresentation
 }
 
 function finding(severity: Finding["severity"], title: string, files: string[]): Finding {
-  return { severity, category: "dependency", title, description: title, files };
+  return { severity, category: "dependency", title, description: title, action: `Review ${title}`, files };
 }
