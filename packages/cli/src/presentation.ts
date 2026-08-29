@@ -327,7 +327,7 @@ function reviewTopics(result: ReviewResult): string[] {
   const topics = new Map<string, string>();
   for (const contribution of result.risk.contributions) {
     const key = riskTopicKey(contribution.id);
-    topics.set(key, key === "dependency" ? categoryLabel("dependency") : contribution.reason);
+    topics.set(key, topicLabel(key));
   }
   for (const finding of result.findings) {
     if (!topics.has(finding.category)) topics.set(finding.category, categoryLabel(finding.category));
@@ -347,6 +347,19 @@ function riskTopicKey(id: string | undefined): string {
   return `risk:${id ?? "unknown"}`;
 }
 
+function topicLabel(key: string): string {
+  switch (key) {
+    case "database": return categoryLabel("database");
+    case "secret": return categoryLabel("secret");
+    case "configuration": return categoryLabel("configuration");
+    case "dependency": return categoryLabel("dependency");
+    case "dangerous-file": return categoryLabel("dangerous-file");
+    case "test-attention": return categoryLabel("test-attention");
+    case "large-change": return categoryLabel("large-change");
+    case "deleted-file": return "Deleted file";
+    default: return "Other review signals";
+  }
+}
 function categoryLabel(category: Finding["category"]): string {
   switch (category) {
     case "database": return "Database migrations";

@@ -569,7 +569,7 @@ test("presentation summarizes severity counts and distinct review topics", () =>
   assert.doesNotMatch(output, /\/10/);
   assert.doesNotMatch(output, /Review the highlighted findings and affected files\./);
   assert.equal((output.match(/→ Configuration changes/g) ?? []).length, 1);
-  assert.match(output, /→ Database migration/);
+  assert.equal((output.match(/→ Database migrations/g) ?? []).length, 1);
   assert.match(output, /→ Dependency changes/);
 
 
