@@ -1,6 +1,6 @@
 {
   "name": "@agentcheck/cli",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Deterministic, local-first verification of coding-agent changes before you commit.",
   "license": "Apache-2.0",
   "keywords": [
@@ -31,7 +31,7 @@
     "verify:package": "node ../../scripts/verify-cli-package.mjs"
   },
   "dependencies": {
-    "@agentcheck/core": "0.1.4"
+    "@agentcheck/core": "0.2.0"
   },
   "author": "emreordu",
   "repository": {

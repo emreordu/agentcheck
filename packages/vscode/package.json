@@ -1,7 +1,7 @@
 {
   "name": "agentcheck-vscode",
   "displayName": "AgentCheck",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "publisher": "agentcheck",
   "description": "Independent change verification for AI-assisted coding in VS Code.",
   "license": "Apache-2.0",
@@ -90,13 +90,13 @@
     "test": "tsc -p tsconfig.test.json && node --test --test-concurrency=1 .test-dist/findings-tree.test.js .test-dist/checkpoint-diff-model.test.js",
     "test:host": "npm run build && node scripts/run-extension-host-test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "package": "npm run build && vsce package --no-dependencies --out agentcheck-vscode-0.1.4.vsix"
+    "package": "npm run build && vsce package --no-dependencies --out agentcheck-vscode-0.2.0.vsix"
   },
   "vsce": {
     "dependencies": false
   },
   "devDependencies": {
-    "@agentcheck/core": "0.1.4",
+    "@agentcheck/core": "0.2.0",
     "@types/vscode": "^1.95.0",
     "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.25.0"

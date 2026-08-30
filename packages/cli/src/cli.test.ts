@@ -522,7 +522,7 @@ test("help, version, detached HEAD, unknown commands, and non-repository errors 
 
     assert.deepEqual(await agentcheck(repository.path, ["--version"]), {
       exitCode: 0,
-      stdout: "0.1.5\n",
+      stdout: "0.2.0\n",
       stderr: "",
     });
 
