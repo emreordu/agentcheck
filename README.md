@@ -133,6 +133,18 @@ npm test
 
 The monorepo contains `packages/core` for all business logic, `packages/cli` for terminal presentation, and `packages/vscode` for the thin editor UI. See [CONTRIBUTING.md](CONTRIBUTING.md) before changing analyzers.
 
+### Release integrity
+
+Before a local release handoff, run:
+
+```bash
+npm run verify:release
+```
+
+This deterministic, no-network check first clears generated package output and rebuilds all workspaces. In isolated temporary directories it then packs Core and CLI, verifies their published files, imports the packed Core package, installs the packed CLI with its packed Core dependency, and runs `agentcheck --version`. It also creates a temporary VSIX and checks its manifest, extension entrypoint, commands, icons, documentation, license, and excluded dependency/source boundaries. It does not publish, tag, alter package versions, modify the lockfile, or retain release artifacts.
+
+Package versions intentionally remain independent. The check validates only real relationships: each workspace package agrees with the lockfile, and the CLI's runtime `@agentcheck/core` dependency agrees with the Core package version.
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
