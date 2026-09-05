@@ -9,3 +9,4 @@ tsconfig*.json
 node_modules/**
 *.vsix
 dist/extension-host-test.cjs
+scripts/run-extension-host-test.mjs
